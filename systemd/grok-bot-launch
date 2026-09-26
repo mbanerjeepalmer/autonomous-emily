@@ -1,0 +1,29 @@
+#!/bin/bash
+# Launch Grok Bot under the VNC display with a usable Ozone/X11 backend.
+set -euo pipefail
+
+export DISPLAY="${DISPLAY:-:1}"
+export ELECTRON_OZONE_PLATFORM_HINT="${ELECTRON_OZONE_PLATFORM_HINT:-x11}"
+
+# Prefer the packaged binary from the .deb / apt package
+for candidate in \
+  /usr/bin/grok-bot \
+  "/opt/Grok Bot/grok-bot" \
+  "/opt/Grok Bot/grokbot" \
+  /usr/local/bin/grok-bot
+do
+  if [[ -x "$candidate" ]]; then
+    exec "$candidate" "$@"
+  fi
+done
+
+# AppImage fallback if present
+shopt -s nullglob
+for appimage in /opt/grok-bot/*.AppImage "$HOME"/Grok*.AppImage; do
+  if [[ -x "$appimage" ]]; then
+    exec "$appimage" "$@"
+  fi
+done
+
+echo "Grok Bot binary not found. Install the .deb or place an AppImage under /opt/grok-bot/" >&2
+exit 1

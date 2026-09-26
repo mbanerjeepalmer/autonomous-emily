@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Grok Bot
+Comment=Always-on Grok Bot client
+Exec=/usr/local/bin/grok-bot-launch
+Icon=grok-bot
+Terminal=false
+X-GNOME-Autostart-enabled=true
+StartupNotify=false

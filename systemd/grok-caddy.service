@@ -1,0 +1,19 @@
+[Unit]
+Description=Caddy reverse proxy for Grok Bot desktop (HTTPS)
+After=network-online.target grok-desktop-auth.service grok-novnc.service
+Wants=network-online.target
+Requires=grok-desktop-auth.service grok-novnc.service
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/grok-desktop.env
+ExecStart=/usr/bin/caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+Restart=on-failure
+RestartSec=5
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

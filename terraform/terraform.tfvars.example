@@ -1,0 +1,21 @@
+# Example tfvars — copy to terraform.tfvars (gitignored via *.tfvars except this example)
+#
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# Prefer loading the API token from the environment instead of this file:
+#   export HCLOUD_TOKEN=...
+#   # then in terraform.tfvars leave hcloud_token unset and use:
+#   # TF_VAR_hcloud_token or -var="hcloud_token=$HCLOUD_TOKEN"
+
+# hcloud_token = "REPLACE_ME"
+
+ssh_public_key = "ssh-ed25519 AAAA... your-key-comment"
+
+server_name  = "grok-bot"
+server_type  = "cx22"
+location     = "fsn1"
+desktop_user = "grok"
+
+# After Tailscale works, replace with your home/office CIDR or empty Tailscale-only access
+# (then lock SSH to Tailscale by removing public 22 entirely or using ssh_allow_cidrs = []).
+ssh_allow_cidrs = ["0.0.0.0/0", "::/0"]

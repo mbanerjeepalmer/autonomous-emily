@@ -1,0 +1,20 @@
+#!/bin/sh
+# XFCE session for TigerVNC display :1
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+export XDG_SESSION_TYPE=x11
+export XDG_CURRENT_DESKTOP=XFCE
+
+# Unlock login keyring for Grok Bot secrets (empty password set at bootstrap)
+if command -v gnome-keyring-daemon >/dev/null 2>&1; then
+  eval "$(gnome-keyring-daemon --start --components=secrets,ssh,pkcs11 2>/dev/null)"
+  export GNOME_KEYRING_CONTROL
+  export SSH_AUTH_SOCK
+fi
+
+# dbus for Electron / libsecret
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+  eval "$(dbus-launch --sh-syntax)"
+fi
+
+exec startxfce4
