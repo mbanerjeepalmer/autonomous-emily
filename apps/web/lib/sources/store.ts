@@ -32,7 +32,7 @@ export function setPipelineCacheInvalidator(invalidator: () => void): void {
 }
 
 export function missingRedisWriteError(
-  env: NodeJS.ProcessEnv = process.env,
+  env: { [key: string]: string | undefined } = process.env,
 ): string | null {
   const required = Boolean(env.VERCEL || env.EMILY_REQUIRE_REDIS === "1");
   if (!required) return null;
