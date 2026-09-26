@@ -18,7 +18,18 @@ const TABS = [
 ] as const;
 
 function splitDetailTerms(details?: string): string[] {
-  return details ? details.split(/[,\n/]/).map((s) => s.trim()).filter(Boolean) : [];
+  if (!details) return [];
+  const seen = new Set<string>();
+  const terms: string[] = [];
+  for (const raw of details.split(/[,\n/]/)) {
+    const term = raw.trim();
+    if (!term) continue;
+    const key = term.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    terms.push(term);
+  }
+  return terms;
 }
 
 function withoutTerm(details: string | undefined, term: string): string | undefined {
