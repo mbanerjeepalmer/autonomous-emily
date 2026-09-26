@@ -7,16 +7,17 @@ type Params = {
   material?: string;
   color?: string;
   details?: string;
+  notes?: string;
   budget?: string;
   dest?: string;
   size?: string;
 };
 
 export default async function Requirements({ searchParams }: { searchParams: Promise<Params> }) {
-  const { q, brand, material, color, details, budget, dest, size } = await searchParams;
+  const { q, brand, material, color, details, notes, budget, dest, size } = await searchParams;
   const backQs = (() => {
     const sp = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q, brand, material, color, details })) if (v) sp.set(k, v);
+    for (const [k, v] of Object.entries({ q, brand, material, color, details, notes })) if (v) sp.set(k, v);
     const s = sp.toString();
     return s ? `?${s}` : "";
   })();
@@ -32,7 +33,7 @@ export default async function Requirements({ searchParams }: { searchParams: Pro
           The last few things the agent needs before it goes shopping on your behalf: how much you&apos;ll spend,
           where it has to ship, and what sizes are actually wearable by you.
         </p>
-        <RequirementsForm hidden={{ q, brand, material, color, details }} initial={{ budget, dest, size }} />
+        <RequirementsForm hidden={{ q, brand, material, color, details, notes }} initial={{ budget, dest, size }} />
       </div>
     </main>
   );

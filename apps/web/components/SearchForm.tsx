@@ -1,53 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-const EXAMPLES = [
-  "Yohji Yamamoto side-zip boots",
-  "visvim FBT, brown suede",
-  "Any Comme des Garçons Homme Plus archive shoes",
-  "Y-3 Qasa High",
-];
-
-export function SearchForm({ brands }: { brands: { id: string; name: string }[] }) {
+export function SearchForm() {
   const [q, setQ] = useState("");
+  const [image, setImage] = useState<{ name: string; url: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const canSubmit = q.trim().length > 0 || image !== null;
 
   return (
-    <form action="/insider" method="GET" className="search-form">
-      <textarea
-        name="q"
-        rows={3}
-        placeholder="What are you hunting for? e.g. “Yohji Yamamoto side-zip boots” or “visvim FBT in brown suede”"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        autoFocus
-      />
+    <form action="/insider" method="GET" className="landing-form">
+      <input type="hidden" name="q" value={q} />
+      {image && <input type="hidden" name="image" value={image.name} />}
 
-      <div className="chiprow">
-        <span className="small muted">Try:</span>
-        {EXAMPLES.map((ex) => (
-          <button key={ex} type="button" className="chip pick" onClick={() => setQ(ex)}>
-            {ex}
+      {image && (
+        <div className="landing-image-chip">
+          <img src={image.url} alt="" />
+          <span>{image.name}</span>
+          <button type="button" onClick={() => setImage(null)} aria-label="Remove image">
+            ×
           </button>
-        ))}
-      </div>
+        </div>
+      )}
 
-      <div className="chiprow">
-        <span className="small muted">Or a brand:</span>
-        {brands.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            className="chip pick"
-            onClick={() => setQ((prev) => (prev.trim() ? `${prev.trim()} ${b.name}` : b.name))}
-          >
-            {b.name}
-          </button>
-        ))}
-      </div>
+      <div className="landing-bar">
+        <button
+          type="button"
+          className="landing-icon-btn"
+          aria-label="Attach a photo"
+          onClick={() => fileRef.current?.click()}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="5" width="18" height="14" rx="1.5" />
+            <circle cx="9" cy="10.5" r="1.4" />
+            <path d="M21 16l-5.5-5.5-4 4L8 11l-5 5" />
+          </svg>
+        </button>
 
-      <div className="search-row">
-        <button type="submit" className="btn primary">Next: add insider details →</button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) setImage({ name: f.name, url: URL.createObjectURL(f) });
+          }}
+        />
+
+        <textarea
+          rows={1}
+          placeholder="Describe it, or attach a photo…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
+        />
+
+        <button type="submit" className="landing-icon-btn send" aria-label="Next" disabled={!canSubmit}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <polyline points="14 6 20 12 14 18" />
+          </svg>
+        </button>
       </div>
     </form>
   );

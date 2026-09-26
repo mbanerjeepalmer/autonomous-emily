@@ -2,7 +2,7 @@
 
 Finds under-catalogued Japanese designer footwear on messy marketplaces by matching photos and tag text against a reference set. It then prices each find against sold comps and flags only high-confidence, high-margin buys for a human to review.
 
-This is a **hard-coded prototype**. The listings, reference images, embeddings, OCR output and comps are all fixed data. The matching, valuation and scoring logic is real and runs over that data.
+This is a **hard-coded prototype**. The listings, reference images, embeddings, OCR output and comps are all fixed data. The matching, valuation and scoring logic is real and runs over that data. One piece is now live: the results page also runs a real discovery agent (see [Live discovery agent](#live-discovery-agent) below) alongside the fixed pipeline.
 
 ```bash
 npm install
@@ -10,7 +10,7 @@ npm run dev        # http://localhost:3000
 npm test           # pipeline checks
 ```
 
-Requires Node 20.9+.
+Requires Node 20.9+. For the live discovery agent, also set `TAVILY_API_KEY` and `OPENROUTER_API_KEY` (see `.env.example`) — the rest of the app works without them.
 
 ## Pages
 
@@ -29,7 +29,7 @@ A four-step flow for briefing the agent, then its results:
 | Step | File | Prototype | Real version |
 |---|---|---|---|
 | 1. Target universe | `lib/data/references.ts` | 6 models, brand variants incl. kana/kanji and misspellings | Hundreds of models, real reference photos |
-| 2. Scrape broadly | `lib/data/listings.ts` | 11 messy listings from 5 sources | Tavily search → fetch → extract adapters in `lib/sources/` |
+| 2. Scrape broadly | `lib/data/listings.ts` | 11 messy listings from 5 sources | **Live**: `lib/agent/discoveryAgent.ts`, a [Pi](https://pi.dev) agent with a Tavily search tool — see below |
 | 3a. Image embeddings | `lib/mockEmbeddings.ts` | Synthetic vectors that behave like CLIP | Hosted CLIP via Replicate |
 | 3b. Vector search | `lib/vectorIndex.ts` | In-memory cosine, same shape as a Pinecone query | Pinecone index |
 | 3c. OCR + fuzzy brand | `lib/fuzzy.ts`, `lib/match.ts` | OCR text hard-coded; fuzzy matching is real | OCR model on tag/insole photos |
@@ -48,6 +48,17 @@ Each signal gives an independent probability, and they are combined as `1 − Π
 - **Text**: brand or model words in the seller's title or description. This is a weak signal.
 
 Penalties apply when the evidence contradicts itself. A tag reading a non-target brand (e.g. Minnetonka) multiplies confidence by 0.2. A tag naming a different target brand multiplies it by 0.3. If the brand is confirmed but the silhouette doesn't match, confidence is capped at 60%. Parent/line relationships (Y-3 → Yohji Yamamoto) support a match instead of contradicting it.
+
+## Live discovery agent
+
+`/results` also renders a "Live marketplace scan" panel, wired to a real agent instead of hard-coded data:
+
+- `lib/agent/discoveryAgent.ts` — a [`@earendil-works/pi-agent-core`](https://pi.dev) `Agent`, run with an OpenRouter model (`@earendil-works/pi-ai`, default `openai/gpt-4o-mini`, override with `DISCOVERY_AGENT_MODEL`).
+- `lib/agent/tavilySearch.ts` — the agent's one tool, `tavily_search`, calling the [Tavily](https://tavily.com) search API.
+- `app/api/discover/route.ts` — `POST` endpoint the results page calls with the buyer's brief (query, insider details, budget, destination, size); the agent calls `tavily_search` a few times, then returns strict JSON findings (`title`, `url`, `source`, `price`, `snippet`).
+- `components/LiveSearch.tsx` — client component that fetches `/api/discover` on the results page and renders the findings.
+
+This only replaces step 2. Its findings are **not** matched, valued or scored — the rest of the pipeline (embeddings, OCR, comps, confidence) still runs entirely on the fixed prototype dataset, per the table above. Requires `TAVILY_API_KEY` and `OPENROUTER_API_KEY`; without them the panel shows an inline error and the rest of the app is unaffected.
 
 ## Caveats
 

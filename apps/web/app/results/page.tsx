@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { runPipeline } from "@/lib/pipeline";
-import { brandById, refById } from "@/lib/data/references";
-import { RULES, SOURCE_COSTS } from "@/lib/config";
-import { gbp, money, pct } from "@/lib/format";
-import { DESTINATIONS, DEFAULT_DESTINATION, shippingEase, isDestinationId, EASE_TONE } from "@/lib/destinations";
+import { RULES } from "@/lib/config";
+import { gbp, pct } from "@/lib/format";
+import { DESTINATIONS, DEFAULT_DESTINATION, isDestinationId } from "@/lib/destinations";
 import { relevance, hasCriteria, type SearchCriteria } from "@/lib/relevance";
-import { ShoePhoto } from "@/components/ShoePhoto";
-import { Confidence } from "@/components/Confidence";
-import { DecisionBadge } from "@/components/Decision";
+import { OpportunityRow } from "@/components/OpportunityRow";
+import { RefineBar } from "@/components/RefineBar";
+import { LiveSearch } from "@/components/LiveSearch";
 import type { Opportunity } from "@/lib/types";
 
 const TABS = [
@@ -18,7 +17,14 @@ const TABS = [
   { id: "no-match", label: "No match" },
 ] as const;
 
-const STATUS_LABEL: Record<Opportunity["status"], string> = { flagged: "Flagged", review: "Review", pass: "Pass", "no-match": "No match" };
+function splitDetailTerms(details?: string): string[] {
+  return details ? details.split(/[,\n/]/).map((s) => s.trim()).filter(Boolean) : [];
+}
+
+function withoutTerm(details: string | undefined, term: string): string | undefined {
+  const remaining = splitDetailTerms(details).filter((t) => t.toLowerCase() !== term.toLowerCase());
+  return remaining.length ? remaining.join(", ") : undefined;
+}
 
 type Params = {
   tab?: string;
@@ -28,6 +34,7 @@ type Params = {
   material?: string;
   color?: string;
   details?: string;
+  notes?: string;
   budget?: string;
   size?: string;
 };
@@ -42,7 +49,7 @@ function qs(params: Params, overrides: Partial<Params> = {}) {
 
 export default async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams;
-  const { tab = "all", q, brand, material, color, details, size } = params;
+  const { tab = "all", q, brand, material, color, details, notes, size } = params;
   const dest = isDestinationId(params.dest) ? params.dest : DEFAULT_DESTINATION;
   const destInfo = DESTINATIONS.find((d) => d.id === dest)!;
   const budget = params.budget && Number.isFinite(Number(params.budget)) ? Number(params.budget) : undefined;
@@ -68,7 +75,7 @@ export default async function Results({ searchParams }: { searchParams: Promise<
   const count = (s: string) => (s === "all" ? ranked.length : ranked.filter((o) => o.status === s).length);
 
   return (
-    <main className="page">
+    <main className="page page-refine">
       <p className="small" style={{ margin: "0 0 12px" }}>
         <Link href="/" className="muted">← New search</Link>
         {" · "}
@@ -100,6 +107,29 @@ export default async function Results({ searchParams }: { searchParams: Promise<
         <div className="stat"><div className="label">Flagged upside</div><div className="value num">{gbp(flagged.reduce((s, o) => s + (o.expectedProfit ?? 0), 0))}</div></div>
       </section>
 
+      {searching && (
+        <LiveSearch
+          brief={{
+            query: q || [brand, material, color, details].filter(Boolean).join(" "),
+            brand, material, color, details, notes, budget, destination: destInfo.label, size,
+          }}
+        />
+      )}
+
+      {splitDetailTerms(details).length > 0 && (
+        <div className="direction-chips">
+          <span className="small muted">Refining toward:</span>
+          {splitDetailTerms(details).map((term) => (
+            <Link key={term} href={`/results${qs(params, { details: withoutTerm(details, term) })}`} className="chip pick">
+              {term} ✕
+            </Link>
+          ))}
+          <Link href={`/results${qs(params, { details: undefined })}`} className="small muted" style={{ marginLeft: 4 }}>
+            Clear direction
+          </Link>
+        </div>
+      )}
+
       <nav className="tabs">
         {TABS.map((t) => (
           <Link key={t.id} href={`/results${qs(params, { tab: t.id === "all" ? undefined : t.id })}`} className={`tab ${tab === t.id ? "active" : ""}`}>
@@ -109,75 +139,21 @@ export default async function Results({ searchParams }: { searchParams: Promise<
       </nav>
 
       <div className="list">
-        {shown.map(({ o, rel }) => {
-          const l = o.listing;
-          const ref = o.match ? refById(o.match.refId) : null;
-          const src = SOURCE_COSTS[l.source];
-          const ease = shippingEase(l.source, dest);
-          return (
-            <Link key={l.id} href={`/listing/${l.id}${qs(params)}`} className="row">
-              <ShoePhoto sketch={l.photos[0].sketch} kind={l.photos[0].kind} uid={`t-${l.photos[0].id}`} className="thumb" />
-              <div style={{ minWidth: 0 }}>
-                <div className="title">{l.title}</div>
-                {l.titleGloss && <div className="gloss">“{l.titleGloss}”</div>}
-                <div className="meta">
-                  <span className="chip src">{src.flag} · {src.label}</span>
-                  {l.size && <span className="chip">{l.size}</span>}
-                  <span className="chip">{l.condition}</span>
-                  <span className="chip">{l.photos.length} photo{l.photos.length === 1 ? "" : "s"}</span>
-                </div>
-                {searching && rel.matched.length > 0 && (
-                  <div className="meta" style={{ marginTop: 4 }}>
-                    <span className="small muted">Matches:</span>
-                    {rel.matched.map((m) => (
-                      <span key={m} className="chip hit">{m}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="col-match" style={{ minWidth: 0 }}>
-                {ref && o.match ? (
-                  <>
-                    <div className="small" style={{ fontWeight: 600, marginBottom: 4 }}>
-                      {brandById(ref.brandId).name} — {ref.model}
-                    </div>
-                    <Confidence value={o.match.confidence} label="Match" />
-                  </>
-                ) : (
-                  <span className="muted small">No reference match</span>
-                )}
-                <div className={`ease ${EASE_TONE[ease.level]}`} style={{ marginTop: 8 }}>
-                  <span className="dot" /> {ease.label} shipping · {ease.days}
-                </div>
-              </div>
-              <div className="money">
-                <div className="small muted">
-                  {money(l.price)} → landed <span className="num">{gbp(o.landed.total)}</span>
-                </div>
-                {o.valuation && <div className="big num">≈ {gbp(o.valuation.estimate)}</div>}
-                {o.expectedProfit != null && (
-                  <div className="small num" style={{ color: o.expectedProfit > 0 ? "var(--good)" : "var(--bad)" }}>
-                    {o.expectedProfit > 0 ? "+" : ""}{gbp(o.expectedProfit)} expected
-                  </div>
-                )}
-                {budget != null && (
-                  <div className="small num" style={{ color: withinBudget(o) ? "var(--good)" : "var(--bad)" }}>
-                    {withinBudget(o) ? "Within budget" : `Over by ${gbp(o.landed.total - budget)}`}
-                  </div>
-                )}
-              </div>
-              <div className="col-status">
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <span className={`badge ${o.status}`}>{STATUS_LABEL[o.status]}</span>
-                  <DecisionBadge id={l.id} />
-                </div>
-                <div className="reason">{o.reasons[0]}</div>
-              </div>
-            </Link>
-          );
-        })}
+        {shown.map(({ o, rel }) => (
+          <OpportunityRow
+            key={o.listing.id}
+            o={o}
+            href={`/listing/${o.listing.id}${qs(params)}`}
+            dest={dest}
+            rel={rel}
+            searching={searching}
+            budget={budget}
+          />
+        ))}
         {!shown.length && <p className="muted">Nothing here.</p>}
       </div>
+
+      <RefineBar />
     </main>
   );
 }
