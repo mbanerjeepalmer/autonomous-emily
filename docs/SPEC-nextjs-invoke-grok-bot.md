@@ -4,6 +4,16 @@ For **you** (operator) and the **next agent session**. Do not reinvent Hetzner/V
 
 ---
 
+## Monorepo layout
+
+| Path | Role |
+|------|------|
+| `apps/grail-finder` | Product Next.js app (Vercel) |
+| `apps/control` | Ops Next.js — `/desktop` + invoke API |
+| `infra/hetzner` | Grok Bot always-on client |
+
+Invoke route lands in **`apps/control`**. Product UI that calls it may live in `grail-finder` or `control` — prefer implementing the API in `control` first.
+
 ## Goal
 
 Let the Next.js app on Vercel **wake a Grok Bot** by HTTP POST.  
@@ -107,10 +117,10 @@ Routine prompt must tell the Bot to honor these fields.
 
 ### Repo pointers
 
-- Auth/desktop JWT: [`lib/auth.ts`](../lib/auth.ts)
-- Desktop UI: [`components/DesktopClient.tsx`](../components/DesktopClient.tsx)
+- Auth/desktop JWT: [`apps/control/lib/auth.ts`](../apps/control/lib/auth.ts)
+- Desktop UI: [`apps/control/components/DesktopClient.tsx`](../apps/control/components/DesktopClient.tsx)
 - Ops runbook: [`docs/runbook.md`](./runbook.md)
-- Hetzner gateway: [`gateway/`](../gateway/)
+- Hetzner gateway: [`infra/hetzner/gateway/`](../infra/hetzner/gateway/)
 
 ---
 

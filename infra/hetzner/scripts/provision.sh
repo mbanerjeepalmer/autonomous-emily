@@ -2,7 +2,7 @@
 # Provision the Hetzner server with Terraform, then print bootstrap instructions.
 # Usage (from repo root):
 #   set -a && source .env && set +a
-#   ./scripts/provision.sh
+#   ./infra/hetzner/scripts/provision.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

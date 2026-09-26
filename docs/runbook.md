@@ -35,8 +35,8 @@ Use the **same** `DESKTOP_JWT_SECRET` in `.env` (bootstrap) and in the Vercel pr
 
 ```bash
 set -a && source .env && set +a
-chmod +x scripts/*.sh systemd/grok-bot-launch systemd/grok-novnc-start systemd/grok-vnc-run systemd/xstartup gateway/auth_validate.py
-./scripts/provision.sh
+chmod +x infra/hetzner/scripts/*.sh infra/hetzner/systemd/grok-bot-launch infra/hetzner/systemd/grok-novnc-start infra/hetzner/systemd/grok-vnc-run infra/hetzner/systemd/xstartup infra/hetzner/gateway/auth_validate.py
+./infra/hetzner/infra/hetzner/scripts/provision.sh
 ```
 
 Default server type is **cx23** (Hetzner’s current 2 vCPU / 4 GB SKU; `cx22` was removed from the API). Use `server_type = "cx33"` in tfvars if RAM is tight.
@@ -147,7 +147,7 @@ Persistent paths on the VPS:
 ### Upgrade Grok Bot
 
 ```bash
-sudo bash ~/autonomous-emily/scripts/upgrade-grok-bot.sh
+sudo bash ~/autonomous-emily/infra/hetzner/scripts/upgrade-grok-bot.sh
 ```
 
 ### Status

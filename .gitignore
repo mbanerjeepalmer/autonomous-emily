@@ -2,7 +2,7 @@
 .env.local
 .env.*.local
 *.tfvars
-!terraform/terraform.tfvars.example
+!infra/hetzner/terraform/terraform.tfvars.example
 .terraform/
 *.tfstate
 *.tfstate.*
