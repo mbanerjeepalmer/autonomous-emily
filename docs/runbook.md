@@ -35,9 +35,11 @@ Use the **same** `DESKTOP_JWT_SECRET` in `.env` (bootstrap) and in the Vercel pr
 
 ```bash
 set -a && source .env && set +a
-chmod +x scripts/*.sh systemd/grok-bot-launch systemd/grok-novnc-start systemd/xstartup gateway/auth_validate.py
+chmod +x scripts/*.sh systemd/grok-bot-launch systemd/grok-novnc-start systemd/grok-vnc-run systemd/xstartup gateway/auth_validate.py
 ./scripts/provision.sh
 ```
+
+Default server type is **cx23** (Hetzner’s current 2 vCPU / 4 GB SKU; `cx22` was removed from the API). Use `server_type = "cx33"` in tfvars if RAM is tight.
 
 Create DNS **A** record: `DESKTOP_PUBLIC_HOST` → server IPv4.
 
@@ -72,9 +74,39 @@ Caddy should obtain a Let’s Encrypt cert once DNS propagates.
 
 ## First Grok Bot login
 
-1. Connect from `/desktop`.
-2. In the remote XFCE session, complete Cursor SSO for Grok Bot once.
-3. Subsequent visits only need the Vercel gate + desktop JWT; Grok Bot should stay signed in via the keyring/session on the VPS.
+1. Connect from `/desktop` (or open a JWT-minted `https://$DESKTOP_PUBLIC_HOST/vnc.html?…` URL).
+2. In the remote XFCE session, Grok Bot should already be open (autostart). If not, run **Grok Bot** from the menu or `/usr/local/bin/grok-bot-launch`.
+3. Complete **Cursor SSO** in the window that opens inside the remote desktop (one-time).
+4. Unlock/persist the keyring if prompted so restarts keep the session.
+5. Closing the browser tab does **not** stop cloud bots — only the view of the client. Killing Grok Bot on the VPS drops the client / local-exec side only.
+
+## Tailscale (ops SSH)
+
+Bootstrap installs Tailscale. With `TAILSCALE_AUTH_KEY` set it joins during bootstrap; otherwise on the server:
+
+```bash
+sudo tailscale up --ssh --hostname=grok-bot
+```
+
+Then prefer `ssh grok@grok-bot` (MagicDNS) and narrow `ssh_allow_cidrs` in Terraform.
+
+## Hardening checklist
+
+- TigerVNC / noVNC bound to localhost; only `:80`/`:443` (and SSH / Tailscale UDP) on the public firewall
+- Key-only SSH (`ssh_pwauth: false` via cloud-init)
+- `unattended-upgrades` enabled by bootstrap
+- After Tailscale works, set `SSH_ALLOW_CIDR` to your IP and re-apply Terraform
+
+## Reboot survival
+
+```bash
+sudo reboot
+# after ~1–2 minutes
+sudo systemctl is-active grok-vnc grok-novnc grok-desktop-auth grok-caddy
+pgrep -af 'Grok Bot/grok-bot'
+```
+
+All four units are `enabled`. Grok Bot returns via XFCE autostart once VNC is up.
 
 ## Day-2
 
