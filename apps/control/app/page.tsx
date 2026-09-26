@@ -38,9 +38,9 @@ export default async function HomePage() {
         The Next.js app on Vercel issues short-lived desktop tokens. The Hetzner
         box runs the real Grok Bot Electron client behind Caddy + noVNC.
       </p>
-      <div style={{ display: "flex", gap: "0.75rem", marginTop: "2rem" }}>
+      <div style={{ display: "flex", gap: "0.75rem", marginTop: "2rem", flexWrap: "wrap" }}>
         <Link
-          href="/desktop"
+          href="/invoke"
           style={{
             display: "inline-block",
             background: "var(--accent)",
@@ -51,7 +51,22 @@ export default async function HomePage() {
             fontWeight: 600,
           }}
         >
-          {signedIn ? "Open desktop" : "Sign in & open desktop"}
+          {signedIn ? "Invoke Bot" : "Sign in & invoke"}
+        </Link>
+        <Link
+          href="/desktop"
+          style={{
+            display: "inline-block",
+            background: "var(--bg-elevated)",
+            color: "var(--ink)",
+            padding: "0.75rem 1.1rem",
+            borderRadius: 8,
+            textDecoration: "none",
+            fontWeight: 600,
+            border: "1px solid var(--line)",
+          }}
+        >
+          Open desktop
         </Link>
       </div>
     </main>
