@@ -12,6 +12,7 @@
   "dependencies": {
     "@earendil-works/pi-agent-core": "^0.87.1",
     "@earendil-works/pi-ai": "^0.87.1",
+    "jose": "^6.2.12",
     "next": "16.3.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",

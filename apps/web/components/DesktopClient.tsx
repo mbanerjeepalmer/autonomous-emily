@@ -118,7 +118,7 @@ export function DesktopClient({ initiallySignedIn }: { initiallySignedIn: boolea
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", background: "var(--bg)" }}>
       <header
         style={{
           display: "flex",
@@ -166,10 +166,10 @@ export function DesktopClient({ initiallySignedIn }: { initiallySignedIn: boolea
           src={session.url}
           style={{
             flex: 1,
+            minHeight: 0,
             width: "100%",
             border: 0,
             background: "#000",
-            minHeight: "calc(100vh - 56px)",
           }}
           allow="clipboard-read; clipboard-write"
         />

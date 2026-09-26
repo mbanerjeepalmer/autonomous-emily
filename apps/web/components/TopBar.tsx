@@ -17,6 +17,8 @@ export function TopBar() {
         <Link href="/">Search</Link>
         <Link href="/results">Browse all</Link>
         <Link href="/references">Target universe</Link>
+        <Link href="/invoke">Invoke</Link>
+        <Link href="/desktop">Desktop</Link>
         <Link href="/api/opportunities">API</Link>
         <BagLink />
       </nav>
