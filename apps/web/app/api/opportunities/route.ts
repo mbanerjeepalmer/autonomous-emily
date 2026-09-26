@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { runPipeline } from "@/lib/pipeline";
-import { ensureStoreHydrated } from "@/lib/sources/store";
+import { refreshFindings } from "@/lib/sources/store";
 
-// Strips embeddings so the payload stays readable.
+// Strips embeddings so the payload stays readable; keep sketches for the bag UI.
 export async function GET() {
-  await ensureStoreHydrated();
+  await refreshFindings();
   const data = runPipeline().map((o) => ({
     ...o,
-    listing: { ...o.listing, photos: o.listing.photos.map(({ embedding: _e, sketch: _s, ...p }) => p) },
+    listing: { ...o.listing, photos: o.listing.photos.map(({ embedding: _e, ...p }) => p) },
   }));
   return NextResponse.json(data);
 }

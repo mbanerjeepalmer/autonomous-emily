@@ -3,27 +3,47 @@
 // Everything the buyer has chosen to keep, independent of any one search —
 // stored in this browser only, same as decisions (see components/Decision.tsx).
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBag } from "@/lib/clientState";
-import { getOpportunity } from "@/lib/pipeline";
 import { directionTermsFor } from "@/lib/direction";
 import { OpportunityRow } from "@/components/OpportunityRow";
 import { DEFAULT_DESTINATION } from "@/lib/destinations";
+import type { Opportunity } from "@/lib/types";
 
 export default function BagPage() {
   const bag = useBag();
   const router = useRouter();
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/opportunities")
+      .then(async (res) => {
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data)) setOpportunities(data as Opportunity[]);
+      })
+      .catch(() => {
+        if (!cancelled) setOpportunities([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const ids = useMemo(
     () => Object.entries(bag.ids).sort((a, b) => b[1].localeCompare(a[1])).map(([id]) => id),
     [bag.ids]
   );
-  const items = ids.map((id) => getOpportunity(id)).filter((o): o is NonNullable<typeof o> => !!o);
+  const byId = useMemo(
+    () => new Map(opportunities.map((o) => [o.listing.id, o])),
+    [opportunities],
+  );
+  const items = ids.map((id) => byId.get(id)).filter((o): o is Opportunity => !!o);
 
   function findMoreLikeThis() {
-    const terms = directionTermsFor(ids);
+    const terms = directionTermsFor(ids, opportunities);
     const params = new URLSearchParams();
     if (terms.length) params.set("details", terms.join(", "));
     router.push(params.toString() ? `/results?${params.toString()}` : "/results");
@@ -61,7 +81,11 @@ export default function BagPage() {
             />
           ))
         ) : (
-          <p className="muted">Nothing in your bag yet — add items from the opportunities list.</p>
+          <p className="muted">
+            {ids.length
+              ? "Those kept listings are no longer in the live set."
+              : "Nothing in your bag yet — add items from the opportunities list."}
+          </p>
         )}
       </div>
     </main>

@@ -27,10 +27,8 @@ export function AgentToggle({
   const agent = value ?? internal;
 
   useEffect(() => {
-    if (value !== undefined) return;
-    const stored = readStoredAgent();
-    if (defaultAgent) return;
-    setInternal(stored);
+    if (value !== undefined || defaultAgent) return;
+    setInternal(readStoredAgent());
   }, [defaultAgent, value]);
 
   function select(next: AgentId) {

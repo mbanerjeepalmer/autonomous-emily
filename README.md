@@ -13,8 +13,8 @@ npm install
 npm run dev            # http://localhost:3000
 ```
 
-- Product: `/`, `/results`, `/listing/…`, `/references`
-- Wake Bot: `/invoke`
+- Product: `/` → `/insider` → `/requirements` → `/results` (starts Grok Bot, or Pi if toggled)
+- Operator invoke: `/invoke`
 - Remote desktop: `/desktop`
 
 Grok Bot ops: [`docs/runbook.md`](docs/runbook.md)  

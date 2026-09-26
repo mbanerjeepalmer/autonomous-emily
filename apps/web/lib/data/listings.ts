@@ -1,6 +1,4 @@
-// 2. SCRAPED LISTINGS — deliberately messy, badly described, multi-source.
-// In the real app these come from the discovery adapters (Tavily search →
-// fetch listing page → extract title/price/photos). Here they are fixed.
+// Scoring-test fixtures only — not shown in the product pipeline.
 // Each photo's embedding is synthesised to sit at a chosen similarity from a
 // reference image, standing in for what CLIP would return on a real photo.
 

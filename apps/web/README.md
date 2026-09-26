@@ -2,7 +2,7 @@
 
 Finds under-catalogued Japanese designer footwear on messy marketplaces by matching photos and tag text against a reference set. It then prices each find against sold comps and flags only high-confidence, high-margin buys for a human to review.
 
-This is a **hard-coded prototype**. The listings, reference images, embeddings, OCR output and comps are all fixed data. The matching, valuation and scoring logic is real and runs over that data. One piece is now live: the results page also runs a real discovery agent (see [Live discovery agent](#live-discovery-agent) below) alongside the fixed pipeline.
+Marketplace listings on `/results` come from a live agent. The reference images, embeddings, OCR rules and comps used to *score* those finds are still a hard-coded prototype set. Completing a product brief starts Grok Bot by default, or Pi if toggled (see [Live discovery agent](#live-discovery-agent) below).
 
 ```bash
 npm install
@@ -16,10 +16,10 @@ Requires Node 20.9+. For the live discovery agent, also set `TAVILY_API_KEY` and
 
 A four-step flow for briefing the agent, then its results:
 
-- `/`: step 1 — what are you looking for? Free text, with brand and example chips.
+- `/`: step 1 — what are you looking for? Free text, plus a Grok Bot / Pi toggle (Grok is the default).
 - `/insider`: step 2 — insider information (brand misspellings, materials, colourway, distinguishing details), pre-filled from the reference set when your search matches a known brand.
-- `/requirements`: step 3 — purchase requirements (budget, shipping destination, sizes you'll take).
-- `/results`: step 4 — ranked opportunities, filtered/highlighted against your brief, with filters (Flagged, Needs review, Passed, No match), a confidence score and an ease-of-shipping read per listing based on your destination.
+- `/requirements`: step 3 — purchase requirements (budget, shipping destination, sizes you'll take). Confirm or switch the agent here.
+- `/results`: step 4 — starts the selected agent, then ranked live opportunities, with filters (Flagged, Needs review, Passed, No match), a confidence score and an ease-of-shipping read per listing based on your destination.
 - `/listing/[id]`: side-by-side visual evidence, OCR reads, comps, landed cost, and buy/ask/dismiss buttons (decisions are saved in your browser)
 - `/references`: the target universe (brands, variants, models, distinguishing details)
 - `/api/opportunities`: the pipeline output as JSON
@@ -29,7 +29,7 @@ A four-step flow for briefing the agent, then its results:
 | Step | File | Prototype | Real version |
 |---|---|---|---|
 | 1. Target universe | `lib/data/references.ts` | 6 models, brand variants incl. kana/kanji and misspellings | Hundreds of models, real reference photos |
-| 2. Scrape broadly | `lib/data/listings.ts` | 11 messy listings from 5 sources | **Live**: `lib/agent/discoveryAgent.ts`, a [Pi](https://pi.dev) agent with a Tavily search tool — see below |
+| 2. Scrape broadly | `lib/data/listings.ts` | Test-only fixtures (not shown in the product) | **Live**: Grok Bot via `/api/emily/invoke` + MCP, or Pi via `lib/agent/discoveryAgent.ts` |
 | 3a. Image embeddings | `lib/mockEmbeddings.ts` | Synthetic vectors that behave like CLIP | Hosted CLIP via Replicate |
 | 3b. Vector search | `lib/vectorIndex.ts` | In-memory cosine, same shape as a Pinecone query | Pinecone index |
 | 3c. OCR + fuzzy brand | `lib/fuzzy.ts`, `lib/match.ts` | OCR text hard-coded; fuzzy matching is real | OCR model on tag/insole photos |
@@ -51,14 +51,13 @@ Penalties apply when the evidence contradicts itself. A tag reading a non-target
 
 ## Live discovery agent
 
-`/results` also renders a "Live marketplace scan" panel, wired to a real agent instead of hard-coded data:
+Completing the brief on `/results` starts the selected agent. Findings are stored and scored with the rest of the pipeline:
 
-- `lib/agent/discoveryAgent.ts` — a [`@earendil-works/pi-agent-core`](https://pi.dev) `Agent`, run with an OpenRouter model (`@earendil-works/pi-ai`, default `openai/gpt-4o-mini`, override with `DISCOVERY_AGENT_MODEL`).
-- `lib/agent/tavilySearch.ts` — the agent's one tool, `tavily_search`, calling the [Tavily](https://tavily.com) search API.
-- `app/api/discover/route.ts` — `POST` endpoint the results page calls with the buyer's brief (query, insider details, budget, destination, size); the agent calls `tavily_search` a few times, then returns strict JSON findings (`title`, `url`, `source`, `price`, `snippet`).
-- `components/LiveSearch.tsx` — client component that fetches `/api/discover` on the results page and renders the findings.
+- **Grok Bot** (default) — `POST /api/emily/invoke` wakes the webhook routine and includes `mcpUrl` (`https://www.autonoemily.world/api/mcp`). The bot searches via that MCP’s `tavily_search` and closes the loop with `submit_findings`. The results page polls `/api/emily/runs/[requestId]` and refreshes when listings land.
+- **Pi** (toggle) — `POST /api/discover` runs `lib/agent/discoveryAgent.ts`, a [`@earendil-works/pi-agent-core`](https://pi.dev) `Agent` with OpenRouter (`@earendil-works/pi-ai`, default `openai/gpt-4o-mini`, override with `DISCOVERY_AGENT_MODEL`) and `lib/agent/tavilySearch.ts`.
+- `components/AgentRun.tsx` — signs in if needed, starts the selected agent, and reports status above the scored list.
 
-This only replaces step 2. Its findings are **not** matched, valued or scored — the rest of the pipeline (embeddings, OCR, comps, confidence) still runs entirely on the fixed prototype dataset, per the table above. Requires `TAVILY_API_KEY` and `OPENROUTER_API_KEY`; without them the panel shows an inline error and the rest of the app is unaffected.
+Live hits still lack real CLIP/OCR, so identity confidence is weaker than the old fixture set. Grok Bot needs the webhook + MCP setup; Pi needs `TAVILY_API_KEY` and `OPENROUTER_API_KEY`. `/invoke` remains an operator shortcut for the same APIs.
 
 ## Caveats
 

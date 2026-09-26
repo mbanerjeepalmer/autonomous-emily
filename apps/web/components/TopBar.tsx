@@ -22,7 +22,7 @@ export function TopBar() {
         <Link href="/api/opportunities">API</Link>
         <BagLink />
       </nav>
-      <span className="proto">Prototype · hard-coded data</span>
+        <span className="proto">Prototype · live agents</span>
     </header>
   );
 }

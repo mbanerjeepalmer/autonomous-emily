@@ -2,7 +2,7 @@
 // agent (@earendil-works/pi-agent-core) with a Tavily search tool, used to
 // find real marketplace listings for the buyer's brief. /api/discover maps
 // its hits through listingFromLooseFinding and upserts them into the store
-// so they appear on /results alongside fixture listings.
+// so they appear on /results as scored opportunities.
 
 import { Agent } from "@earendil-works/pi-agent-core";
 import { contentText, createModels } from "@earendil-works/pi-ai";

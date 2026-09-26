@@ -1,7 +1,6 @@
 // 5. SCORE THE OPPORTUNITY
 // asking price → landed cost in London → vs comp value, weighted by match confidence.
 
-import { LISTINGS } from "./data/listings.ts";
 import { listFindings, setPipelineCacheInvalidator } from "./sources/store.ts";
 import { FX_TO_GBP, IMPORT, RULES, SOURCE_COSTS } from "./config.ts";
 import { matchListing } from "./match.ts";
@@ -107,14 +106,7 @@ export function invalidatePipelineCache(): void {
 setPipelineCacheInvalidator(invalidatePipelineCache);
 
 function allListings(): Listing[] {
-  // A bot finding may be re-submitted, so use its id as the stable key rather
-  // than showing duplicate opportunities. Stored findings take precedence over
-  // fixture data if an id ever overlaps.
-  const listings = new Map(LISTINGS.map((listing) => [listing.id, listing]));
-  for (const finding of listFindings()) {
-    listings.set(finding.id, finding);
-  }
-  return Array.from(listings.values());
+  return listFindings();
 }
 
 export function runPipeline(): Opportunity[] {

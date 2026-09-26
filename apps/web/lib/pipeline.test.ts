@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fuzzyFind, normaliseText } from "./fuzzy.ts";
-import { runPipeline, getOpportunity, landedCost } from "./pipeline.ts";
+import { evaluate, runPipeline, getOpportunity, landedCost } from "./pipeline.ts";
 import { weightedQuantile } from "./valuation.ts";
-import { listingById } from "./data/listings.ts";
+import { LISTINGS, listingById } from "./data/listings.ts";
 import { upsertFindings } from "./sources/store.ts";
 
 test("OCR normalisation fixes common confusions", () => {
@@ -18,33 +18,33 @@ test("weighted median", () => {
 });
 
 test("badly described Mercari FBT is flagged", () => {
-  const o = getOpportunity("mjp-4821")!;
+  const o = evaluate(listingById("mjp-4821")!);
   assert.equal(o.status, "flagged");
   assert.equal(o.match?.refId, "visvim-fbt");
 });
 
 test("Minnetonka lookalike is rejected despite visual similarity", () => {
-  const o = getOpportunity("fbm-1188")!;
+  const o = evaluate(listingById("fbm-1188")!);
   assert.ok(o.match!.bestSimilarity > 0.85);
   assert.equal(o.status, "pass");
   assert.ok(o.match!.conflicts.length > 0);
 });
 
 test("visual-only match goes to review, not flagged", () => {
-  assert.equal(getOpportunity("est-5521")!.status, "review");
+  assert.equal(evaluate(listingById("est-5521")!).status, "review");
 });
 
 test("correctly priced listings pass", () => {
-  assert.equal(getOpportunity("eby-5507781")!.status, "pass");
-  assert.equal(getOpportunity("eby-4410032")!.status, "pass");
+  assert.equal(evaluate(listingById("eby-5507781")!).status, "pass");
+  assert.equal(evaluate(listingById("eby-4410032")!).status, "pass");
 });
 
 test("unknown trainers have no match", () => {
-  assert.equal(getOpportunity("fbm-2044")!.status, "no-match");
+  assert.equal(evaluate(listingById("fbm-2044")!).status, "no-match");
 });
 
 test("Y-3 tag naming Yohji supports rather than contradicts", () => {
-  const o = getOpportunity("eby-3920155")!;
+  const o = evaluate(listingById("eby-3920155")!);
   assert.equal(o.match?.refId, "y3-qasa");
   assert.equal(o.match?.conflicts.length, 0);
 });
@@ -54,11 +54,14 @@ test("landed cost adds VAT for imports, nothing for local pickup", () => {
   assert.equal(landedCost(listingById("fbm-1188")!).total, 60);
 });
 
-test("every listing is evaluated", () => {
-  assert.equal(runPipeline().length, 11);
+test("every fixture listing is evaluable", () => {
+  assert.equal(LISTINGS.length, 11);
+  for (const listing of LISTINGS) {
+    assert.ok(evaluate(listing).listing.id);
+  }
 });
 
-test("submitted findings are merged and invalidate the opportunity cache", async () => {
+test("submitted findings are the only pipeline listings and invalidate the cache", async () => {
   const fixture = listingById("fbm-2044")!;
   const finding = {
     ...fixture,
@@ -69,7 +72,7 @@ test("submitted findings are merged and invalidate the opportunity cache", async
   await upsertFindings("run-cache-invalidation", [finding]);
 
   const opportunity = getOpportunity(finding.id);
-  assert.equal(runPipeline().length, 12);
+  assert.ok(runPipeline().every((o) => o.listing.id.startsWith("bot:")));
   assert.equal(opportunity?.listing.title, finding.title);
   assert.equal(opportunity?.status, "no-match");
 });

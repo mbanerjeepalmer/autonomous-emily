@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { readAppSession } from "@/lib/auth";
+import { publicMcpUrl } from "@/lib/mcp-url";
 import { markRunPending } from "@/lib/sources/store";
 
 type InvokeBody = {
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
     task,
     context: body.context ?? null,
     requestId,
+    mcpUrl: publicMcpUrl(),
     source: "autonoemily.world",
   };
 

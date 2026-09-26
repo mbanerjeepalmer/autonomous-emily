@@ -174,10 +174,16 @@ export default async function Results({ searchParams }: { searchParams: Promise<
             budget={budget}
           />
         ))}
-        {!shown.length && <p className="muted">Nothing here.</p>}
+        {!shown.length && (
+          <p className="muted">
+            {searching
+              ? "No live listings yet for this brief — Emily is searching, or nothing usable came back."
+              : "No live listings yet. Start a search and Emily will send Grok Bot (or Pi) out."}
+          </p>
+        )}
       </div>
 
-      <RefineBar />
+      <RefineBar opportunities={ranked} />
     </main>
   );
 }

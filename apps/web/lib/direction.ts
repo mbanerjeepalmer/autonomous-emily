@@ -2,15 +2,16 @@
 // same coverage-style relevance scoring (relevance.ts) that typed criteria
 // already go through — no separate recommendation model needed.
 
-import { getOpportunity } from "./pipeline";
 import { brandById, refById } from "./data/references";
+import type { Opportunity } from "./types";
 
 /** Descriptive terms (brand, materials, construction details) shared by the
  *  buyer's selected listings — the "direction" to lean into next. */
-export function directionTermsFor(ids: string[]): string[] {
+export function directionTermsFor(ids: string[], opportunities: Opportunity[]): string[] {
+  const byId = new Map(opportunities.map((o) => [o.listing.id, o]));
   const terms = new Set<string>();
   for (const id of ids) {
-    const o = getOpportunity(id);
+    const o = byId.get(id);
     if (!o?.match) continue;
     const brand = brandById(o.match.brandId);
     const ref = refById(o.match.refId);

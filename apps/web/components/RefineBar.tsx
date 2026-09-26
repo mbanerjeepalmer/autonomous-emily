@@ -9,8 +9,9 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelection } from "@/lib/clientState";
 import { directionTermsFor, mergeTerms, parseInstruction } from "@/lib/direction";
+import type { Opportunity } from "@/lib/types";
 
-export function RefineBar() {
+export function RefineBar({ opportunities }: { opportunities: Opportunity[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selection = useSelection();
@@ -31,12 +32,12 @@ export function RefineBar() {
   }
 
   function refineFromSelection() {
-    applyDirection(directionTermsFor(selectedIds));
+    applyDirection(directionTermsFor(selectedIds, opportunities));
   }
 
   function submitText(e: FormEvent) {
     e.preventDefault();
-    applyDirection([...directionTermsFor(selectedIds), ...parseInstruction(text)]);
+    applyDirection([...directionTermsFor(selectedIds, opportunities), ...parseInstruction(text)]);
   }
 
   return (

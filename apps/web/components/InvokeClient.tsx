@@ -149,14 +149,16 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
   return (
     <main className="page page-narrow">
       <p className="small" style={{ margin: "0 0 12px" }}>
+        <Link href="/" className="muted">← Product search</Link>
+        {" · "}
         <Link href="/desktop" className="muted">Open desktop →</Link>
       </p>
       <div className="hero">
         <h1>Run a sourcing agent</h1>
         <p className="muted">
-          Choose the agent for this task. Grok Bot runs through its webhook and sends
-          findings back through MCP. Pi searches with Tavily and stores its findings
-          for scoring on results.
+          Operator shortcut. The main search flow also starts Grok Bot (or Pi if
+          toggled) from results. Grok Bot sends findings back through MCP; Pi
+          searches with Tavily and stores them for scoring.
         </p>
         <form onSubmit={onInvoke} className="search-form">
           <fieldset disabled={loading} className="field">
