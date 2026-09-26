@@ -5,11 +5,12 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w grail-finder",
+    "dev": "npm run dev -w web",
+    "dev:web": "npm run dev -w web",
     "dev:control": "npm run dev -w control",
-    "dev:grail": "npm run dev -w grail-finder",
-    "build": "npm run build -w grail-finder",
+    "build": "npm run build -w web",
+    "build:web": "npm run build -w web",
     "build:control": "npm run build -w control",
-    "test": "npm run test -w grail-finder"
+    "test": "npm run test -w web"
   }
 }

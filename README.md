@@ -2,8 +2,8 @@
 
 | Path | Role |
 |------|------|
-| [`apps/grail-finder`](apps/grail-finder) | Next.js product prototype (Vercel) — under-catalogued footwear finder |
-| [`apps/control`](apps/control) | Next.js ops surface — Grok Bot desktop viewer + (soon) webhook invoke |
+| [`apps/web`](apps/web) | Next.js product app (Vercel) — sourcing / opportunities prototype |
+| [`apps/control`](apps/control) | Next.js ops surface — Grok Bot desktop viewer + webhook invoke |
 | [`infra/hetzner`](infra/hetzner) | Always-on Grok Bot client (Terraform, bootstrap, Caddy/noVNC) |
 | [`docs/`](docs) | Runbook + invoke spec |
 
@@ -11,14 +11,14 @@
 
 ```bash
 npm install
-npm run dev            # grail-finder → http://localhost:3000
-npm run dev:control    # control → http://localhost:3000 (run separately / different port)
+npm run dev            # web → http://localhost:3000
+npm run dev:control    # control (use another port if both run)
 ```
 
-Grok Bot desktop: see [`docs/runbook.md`](docs/runbook.md).  
-Invoke Bot from the app: [`docs/SPEC-nextjs-invoke-grok-bot.md`](docs/SPEC-nextjs-invoke-grok-bot.md).
+Grok Bot desktop: [`docs/runbook.md`](docs/runbook.md)  
+Invoke Bot from the app: [`docs/SPEC-nextjs-invoke-grok-bot.md`](docs/SPEC-nextjs-invoke-grok-bot.md)
 
-Hetzner provision (from repo root):
+Hetzner provision:
 
 ```bash
 set -a && source .env && set +a

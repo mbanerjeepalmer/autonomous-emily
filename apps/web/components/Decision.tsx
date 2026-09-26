@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 
 type Decision = { status: "bought" | "dismissed" | "asked"; note: string; at: string };
-const KEY = "grail-finder:decisions";
+const KEY = "emily:decisions";
 
 function load(): Record<string, Decision> {
   try {

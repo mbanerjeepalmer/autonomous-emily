@@ -3,7 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Grail Finder",
+  title: "Emily",
   description: "Finds under-catalogued Japanese designer footwear across messy marketplaces.",
 };
 

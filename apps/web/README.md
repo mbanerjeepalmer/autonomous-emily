@@ -1,4 +1,4 @@
-# Grail Finder: prototype
+# Web app (sourcing prototype)
 
 Finds under-catalogued Japanese designer footwear on messy marketplaces by matching photos and tag text against a reference set. It then prices each find against sold comps and flags only high-confidence, high-margin buys for a human to review.
 

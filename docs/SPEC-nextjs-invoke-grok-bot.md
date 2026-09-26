@@ -8,11 +8,11 @@ For **you** (operator) and the **next agent session**. Do not reinvent Hetzner/V
 
 | Path | Role |
 |------|------|
-| `apps/grail-finder` | Product Next.js app (Vercel) |
+| `apps/web` | Product Next.js app (Vercel) |
 | `apps/control` | Ops Next.js — `/desktop` + invoke API |
 | `infra/hetzner` | Grok Bot always-on client |
 
-Invoke route lands in **`apps/control`**. Product UI that calls it may live in `grail-finder` or `control` — prefer implementing the API in `control` first.
+Invoke route lands in **`apps/control`**. Product UI that calls it may live in `apps/web` or `apps/control` — prefer implementing the API in `control` first.
 
 ## Goal
 
