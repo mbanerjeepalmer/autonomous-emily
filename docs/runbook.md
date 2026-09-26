@@ -108,6 +108,34 @@ pgrep -af 'Grok Bot/grok-bot'
 
 All four units are `enabled`. Grok Bot returns via XFCE autostart once VNC is up.
 
+## Data survival (reboot vs destroy)
+
+| Event | What happens |
+|-------|----------------|
+| **Reboot** (`sudo reboot` or Hetzner restart) | Disk persists. systemd brings VNC/Caddy/Grok Bot back. Chrome + Grok Bot login in `/home/grok` survive. |
+| **Cursor cloud bots** | Not on this VPS — work continues in Cursor’s cloud computer even if Hetzner is down. |
+| **Destroy / rebuild server** | Local login, Chrome profile, and files under `/home/grok` are gone unless restored from backup/snapshot. |
+
+Persistent paths on the VPS:
+
+- `~/.config/Grok Bot` — app session / userData  
+- `~/.config/google-chrome` — OAuth cookies  
+- `~/.grokbot` — local daemon state  
+- `/etc/grok-desktop.env` — JWT secret (must stay in sync with Vercel)
+
+### Protect against disk loss
+
+1. **Hetzner automated backups** — enable on the server (`backups = true` in Terraform; ~20% surcharge). Daily backups, restore from console.
+2. **Manual snapshot** after important milestones (e.g. post sign-in):
+
+   ```bash
+   # via Hetzner Console → Server → Snapshots → Create
+   # or API create_image action
+   ```
+
+3. Never run `terraform destroy` unless you intend to wipe the box.
+4. Keep `DESKTOP_JWT_SECRET` / `.env` backed up off-box (1Password, etc.) — not only on the VPS.
+
 ## Day-2
 
 ### Rotate desktop JWT secret

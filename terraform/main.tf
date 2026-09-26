@@ -137,6 +137,7 @@ resource "hcloud_server" "grok_bot" {
   ssh_keys     = [hcloud_ssh_key.deploy.id]
   firewall_ids = [hcloud_firewall.grok_bot.id]
   user_data    = local.cloud_init
+  backups      = true
 
   labels = {
     role    = "grok-bot-client"
