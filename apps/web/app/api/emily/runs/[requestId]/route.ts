@@ -1,20 +1,12 @@
 import { NextResponse } from "next/server";
 import { readAppSession } from "@/lib/auth";
-import { authorizeMcp } from "@/lib/mcp-auth";
 import { getRun } from "@/lib/sources/store";
-
-async function authorizeRuns(request: Request): Promise<boolean> {
-  if (authorizeMcp(request)) {
-    return true;
-  }
-  return readAppSession();
-}
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ requestId: string }> },
 ) {
-  if (!(await authorizeRuns(request))) {
+  if (!(await readAppSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { suggestHints } from "@/lib/suggest";
 import { InsiderForm } from "@/components/InsiderForm";
+import { parseAgent } from "@/lib/agent/provider";
 
-type Params = { q?: string; brand?: string; material?: string; color?: string; details?: string; notes?: string };
+type Params = { q?: string; brand?: string; material?: string; color?: string; details?: string; notes?: string; agent?: string };
 
 export default async function Insider({ searchParams }: { searchParams: Promise<Params> }) {
-  const { q = "", brand, material, color, details, notes } = await searchParams;
+  const { q = "", brand, material, color, details, notes, agent } = await searchParams;
   const s = suggestHints(q);
 
   return (
@@ -27,6 +28,7 @@ export default async function Insider({ searchParams }: { searchParams: Promise<
         )}
         <InsiderForm
           q={q}
+          agent={parseAgent(agent)}
           variantChips={s.variantChips}
           materialChips={s.materialChips}
           detailChips={s.detailChips}

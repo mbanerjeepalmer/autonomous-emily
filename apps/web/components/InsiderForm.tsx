@@ -35,6 +35,7 @@ function ChipField({
 
 export function InsiderForm({
   q,
+  agent,
   variantChips,
   materialChips,
   detailChips,
@@ -43,6 +44,7 @@ export function InsiderForm({
   initial = {},
 }: {
   q: string;
+  agent: string;
   variantChips: string[];
   materialChips: string[];
   detailChips: string[];
@@ -53,6 +55,7 @@ export function InsiderForm({
   return (
     <form action="/requirements" method="GET" className="search-form">
       <input type="hidden" name="q" value={q} />
+      <input type="hidden" name="agent" value={agent} />
 
       <ChipField
         name="brand"

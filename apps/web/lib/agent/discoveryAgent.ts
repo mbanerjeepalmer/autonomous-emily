@@ -7,27 +7,10 @@
 import { Agent } from "@earendil-works/pi-agent-core";
 import { contentText, createModels } from "@earendil-works/pi-ai";
 import { openrouterProvider } from "@earendil-works/pi-ai/providers/openrouter";
+import { briefToPrompt, type DiscoveryBrief, type DiscoveryFinding } from "./brief";
 import { tavilySearchTool } from "./tavilySearch";
 
-export type DiscoveryFinding = {
-  title: string;
-  url: string;
-  source?: string;
-  price?: string;
-  snippet?: string;
-};
-
-export type DiscoveryBrief = {
-  query: string;
-  brand?: string;
-  material?: string;
-  color?: string;
-  details?: string;
-  notes?: string;
-  budget?: number;
-  destination?: string;
-  size?: string;
-};
+export type { DiscoveryBrief, DiscoveryFinding } from "./brief";
 
 const DEFAULT_MODEL_ID = process.env.DISCOVERY_AGENT_MODEL || "openai/gpt-4o-mini";
 const AGENT_TIMEOUT_MS = 45_000;
@@ -48,19 +31,6 @@ Rules:
 - "price" is the asking price as shown on the page if you can tell from the snippet, else null.
 - Prefer individual product/listing pages over articles, forums or brand homepages.
 - Return at most 8 findings, best matches first. Return {"findings": []} if nothing relevant turned up.`;
-
-function briefToPrompt(brief: DiscoveryBrief): string {
-  const lines = [`Looking for: ${brief.query}`];
-  if (brief.brand) lines.push(`Brand spellings/variants: ${brief.brand}`);
-  if (brief.material) lines.push(`Material: ${brief.material}`);
-  if (brief.color) lines.push(`Colour: ${brief.color}`);
-  if (brief.details) lines.push(`Distinguishing details: ${brief.details}`);
-  if (brief.notes) lines.push(`Insider tip from the buyer: ${brief.notes}`);
-  if (brief.size) lines.push(`Size: ${brief.size}`);
-  if (brief.budget) lines.push(`Budget (landed, GBP): ${brief.budget}`);
-  if (brief.destination) lines.push(`Ships to: ${brief.destination}`);
-  return lines.join("\n");
-}
 
 function parseFindings(text: string): DiscoveryFinding[] {
   const jsonText = text.trim().replace(/^```(?:json)?\n?/, "").replace(/```$/, "");

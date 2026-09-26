@@ -28,7 +28,7 @@ Hetzner (`desktop.autonoemily.world`) = always-on signed-in **client**, not the 
 flowchart LR
   UI["/invoke UI"] -->|POST /api/emily/invoke| Invoke
   Invoke -->|webhook + requestId| Bot[Grok Bot cloud]
-  Bot -->|MCP Bearer| MCP["/api/mcp"]
+  Bot -->|MCP HTTP| MCP["/api/mcp"]
   MCP -->|tavily_search| Tavily
   MCP -->|submit_findings| Store[Upstash findings]
   Store --> Pipeline["runPipeline → /results"]
@@ -41,8 +41,8 @@ flowchart LR
 |-----|------|
 | `POST /api/emily/invoke` | Session cookie or `EMILY_INVOKE_SECRET` Bearer |
 | Grok Bot webhook | `GROK_BOT_WEBHOOK_KEY` Bearer (outbound from Next.js) |
-| `POST/GET /api/mcp` | `EMILY_MCP_SECRET` Bearer |
-| `GET /api/emily/runs/[requestId]` | Session or `EMILY_MCP_SECRET` Bearer |
+| `POST/GET /api/mcp` | None (Grok Bot cannot send a custom Bearer header) |
+| `GET /api/emily/runs/[requestId]` | Session cookie |
 
 ## Implemented (invoke / desktop)
 
@@ -55,7 +55,7 @@ flowchart LR
 ## MCP (Bot → app)
 
 **Endpoint:** `https://<NEXT_PUBLIC_APP_URL>/api/mcp`  
-**Auth header:** `Authorization: Bearer ${EMILY_MCP_SECRET}`
+**Auth:** none — register the URL only. Grok Bot connectors cannot attach a custom Bearer header.
 
 ### Tools
 
@@ -68,10 +68,10 @@ Bot must **not** call Tavily or Upstash directly, and must **not** curl arbitrar
 
 ### Register in Cursor (HTTP MCP)
 
-1. Deploy `apps/web` with `EMILY_MCP_SECRET`, `TAVILY_API_KEY`, Upstash Redis URL/token.
-2. In Cursor / Grok Bot connectors, add an **HTTP MCP** server:
+1. Deploy `apps/web` with `TAVILY_API_KEY` and Upstash Redis URL/token.
+2. In Grok Bot chat, add a **custom HTTP MCP** server:
    - URL: `https://<your-app>/api/mcp`
-   - Auth: Bearer token = same value as `EMILY_MCP_SECRET`
+   - No auth / no Bearer header
 3. Confirm tools `tavily_search` and `submit_findings` appear for the bot routine.
 
 ### Routine behaviour
@@ -95,10 +95,10 @@ Flow: parse `task` + `requestId` → `tavily_search` → enrich hits into `RawFi
 
 ## Operator checklist
 
-1. **Env** — copy root [`.env.example`](../.env.example); set gate/session, webhook, desktop JWT, `EMILY_MCP_SECRET`, `TAVILY_API_KEY`, Upstash Redis REST URL + token, `NEXT_PUBLIC_APP_URL`.
+1. **Env** — copy root [`.env.example`](../.env.example); set gate/session, webhook, desktop JWT, `TAVILY_API_KEY`, Upstash Redis REST URL + token, `NEXT_PUBLIC_APP_URL`.
 2. **Vercel** — Root Directory = `apps/web`; paste the same env vars into the project.
-3. **Deploy** — ship `apps/web`; confirm `/invoke` and `/api/mcp` respond (MCP should 401 without Bearer).
-4. **Register MCP** — HTTP MCP URL + Bearer `EMILY_MCP_SECRET` in Cursor/Grok Bot connectors.
+3. **Deploy** — ship `apps/web`; confirm `/invoke` and `/api/mcp` respond without a Bearer token.
+4. **Register MCP** — HTTP MCP URL only in Grok Bot (custom server, no auth).
 5. **Routine** — paste [`grok-bot-routine-prompt.md`](grok-bot-routine-prompt.md); set webhook routine **Active**; put URL + key in `GROK_BOT_WEBHOOK_*`.
 6. **Smoke**
    - From `/invoke`, submit a short task; note `requestId`.

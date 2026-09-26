@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { runPipeline } from "@/lib/pipeline";
-import { ensureStoreHydrated } from "@/lib/sources/store";
+import { refreshFindings } from "@/lib/sources/store";
 import { RULES } from "@/lib/config";
 import { gbp, pct } from "@/lib/format";
 import { DESTINATIONS, DEFAULT_DESTINATION, isDestinationId } from "@/lib/destinations";
 import { relevance, hasCriteria, type SearchCriteria } from "@/lib/relevance";
 import { OpportunityRow } from "@/components/OpportunityRow";
 import { RefineBar } from "@/components/RefineBar";
-import { LiveSearch } from "@/components/LiveSearch";
+import { AgentRun } from "@/components/AgentRun";
+import { readAppSession } from "@/lib/auth";
+import { parseAgent } from "@/lib/agent/provider";
 import type { Opportunity } from "@/lib/types";
 
 const TABS = [
@@ -49,6 +51,7 @@ type Params = {
   notes?: string;
   budget?: string;
   size?: string;
+  agent?: string;
 };
 
 // Findings are submitted at runtime and must not become a build-time snapshot.
@@ -63,8 +66,10 @@ function qs(params: Params, overrides: Partial<Params> = {}) {
 }
 
 export default async function Results({ searchParams }: { searchParams: Promise<Params> }) {
-  await ensureStoreHydrated();
+  await refreshFindings();
+  const signedIn = await readAppSession();
   const params = await searchParams;
+  const agent = parseAgent(params.agent);
   const { tab = "all", q, brand, material, color, details, notes, size } = params;
   const dest = isDestinationId(params.dest) ? params.dest : DEFAULT_DESTINATION;
   const destInfo = DESTINATIONS.find((d) => d.id === dest)!;
@@ -124,7 +129,10 @@ export default async function Results({ searchParams }: { searchParams: Promise<
       </section>
 
       {searching && (
-        <LiveSearch
+        <AgentRun
+          agent={agent}
+          initiallySignedIn={signedIn}
+          queryString={qs(params).replace(/^\?/, "")}
           brief={{
             query: q || [brand, material, color, details].filter(Boolean).join(" "),
             brand, material, color, details, notes, budget, destination: destInfo.label, size,

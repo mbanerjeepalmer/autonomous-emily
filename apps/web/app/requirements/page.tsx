@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RequirementsForm } from "@/components/RequirementsForm";
+import { parseAgent } from "@/lib/agent/provider";
 
 type Params = {
   q?: string;
@@ -11,13 +12,15 @@ type Params = {
   budget?: string;
   dest?: string;
   size?: string;
+  agent?: string;
 };
 
 export default async function Requirements({ searchParams }: { searchParams: Promise<Params> }) {
-  const { q, brand, material, color, details, notes, budget, dest, size } = await searchParams;
+  const { q, brand, material, color, details, notes, budget, dest, size, agent } = await searchParams;
+  const selectedAgent = parseAgent(agent);
   const backQs = (() => {
     const sp = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q, brand, material, color, details, notes })) if (v) sp.set(k, v);
+    for (const [k, v] of Object.entries({ q, brand, material, color, details, notes, agent: selectedAgent })) if (v) sp.set(k, v);
     const s = sp.toString();
     return s ? `?${s}` : "";
   })();
@@ -33,7 +36,11 @@ export default async function Requirements({ searchParams }: { searchParams: Pro
           The last few things the agent needs before it goes shopping on your behalf: how much you&apos;ll spend,
           where it has to ship, and what sizes are actually wearable by you.
         </p>
-        <RequirementsForm hidden={{ q, brand, material, color, details, notes }} initial={{ budget, dest, size }} />
+        <RequirementsForm
+          hidden={{ q, brand, material, color, details, notes }}
+          initial={{ budget, dest, size }}
+          agent={selectedAgent}
+        />
       </div>
     </main>
   );

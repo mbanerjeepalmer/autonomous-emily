@@ -73,6 +73,15 @@ export async function ensureStoreHydrated(): Promise<void> {
   await hydratePromise;
 }
 
+/** Re-read findings from Redis so a later request sees MCP / Pi submissions. */
+export async function refreshFindings(): Promise<void> {
+  hydratePromise = loadFromRedis().catch((err) => {
+    hydratePromise = null;
+    throw err;
+  });
+  await hydratePromise;
+}
+
 /** Sync snapshot for pipeline merge. Call ensureStoreHydrated() first on cold start. */
 export function listFindings(): Listing[] {
   return Array.from(findingsMirror.values());

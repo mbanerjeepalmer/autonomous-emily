@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOpportunity, runPipeline } from "@/lib/pipeline";
-import { ensureStoreHydrated } from "@/lib/sources/store";
+import { refreshFindings } from "@/lib/sources/store";
 import { brandById, refById, refImageById } from "@/lib/data/references";
 import { SOURCE_COSTS } from "@/lib/config";
 import { normaliseText } from "@/lib/fuzzy";
@@ -41,7 +41,7 @@ export default async function ListingPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  await ensureStoreHydrated();
+  await refreshFindings();
   const { id } = await params;
   const sp = await searchParams;
   const o = getOpportunity(id);

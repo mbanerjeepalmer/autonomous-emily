@@ -2,15 +2,19 @@
 
 import { useState } from "react";
 import { DESTINATIONS, DEFAULT_DESTINATION } from "@/lib/destinations";
+import { AgentToggle } from "@/components/AgentToggle";
+import type { AgentId } from "@/lib/agent/provider";
 
 const SIZE_CHIPS = ["UK 8", "UK 9", "UK 10", "US 9", "US 10", "EU 43", "EU 44", "25.5cm", "26cm", "27cm"];
 
 export function RequirementsForm({
   hidden,
   initial = {},
+  agent,
 }: {
   hidden: Record<string, string | undefined>;
   initial?: { budget?: string; dest?: string; size?: string };
+  agent: AgentId;
 }) {
   const [size, setSize] = useState(initial.size ?? "");
   const addSize = (chip: string) => setSize((prev) => (prev.trim() ? `${prev.trim()}, ${chip}` : chip));
@@ -41,6 +45,11 @@ export function RequirementsForm({
             <button key={c} type="button" className="chip pick" onClick={() => addSize(c)}>{c}</button>
           ))}
         </div>
+      </div>
+
+      <div className="field">
+        <span className="small">Who should go shopping</span>
+        <AgentToggle name="agent" defaultAgent={agent} />
       </div>
 
       <div className="search-row">
