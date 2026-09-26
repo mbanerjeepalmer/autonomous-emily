@@ -66,114 +66,67 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
 
   if (!signedIn) {
     return (
-      <form
-        onSubmit={onLogin}
-        style={{
-          maxWidth: 420,
-          margin: "4rem auto",
-          padding: "1.5rem",
-          background: "var(--bg-elevated)",
-          border: "1px solid var(--line)",
-          borderRadius: 12,
-        }}
-      >
-        <h1 style={{ marginTop: 0, fontSize: "1.35rem" }}>Sign in to invoke</h1>
-        <p style={{ color: "var(--muted)" }}>
-          Same operator password as the desktop control surface.
-        </p>
-        <label style={{ display: "block", marginBottom: 12 }}>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{
-              display: "block",
-              width: "100%",
-              marginTop: 6,
-              padding: "0.65rem 0.75rem",
-              borderRadius: 8,
-              border: "1px solid var(--line)",
-              background: "var(--bg)",
-              color: "var(--ink)",
-            }}
-          />
-        </label>
-        {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            background: "var(--accent)",
-            color: "var(--accent-ink)",
-            border: 0,
-            borderRadius: 8,
-            padding: "0.7rem 1rem",
-            fontWeight: 600,
-          }}
-        >
-          {loading ? "Signing in…" : "Continue"}
-        </button>
-      </form>
+      <main className="page page-narrow">
+        <div className="hero">
+          <h1>Sign in to invoke</h1>
+          <p className="muted">Same operator password as the desktop control surface.</p>
+          <form onSubmit={onLogin} className="search-form">
+            <div className="field">
+              <label className="small" htmlFor="invoke-password">Password</label>
+              <input
+                id="invoke-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {error && <p className="small" style={{ color: "var(--bad)" }}>{error}</p>}
+            <div className="search-row">
+              <button type="submit" className="btn primary" disabled={loading}>
+                {loading ? "Signing in…" : "Continue"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 640, margin: "0 auto", padding: "3rem 1.5rem" }}>
-      <p style={{ color: "var(--muted)", fontSize: "0.8rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-        Autonomous Emily
+    <main className="page page-narrow">
+      <p className="small" style={{ margin: "0 0 12px" }}>
+        <Link href="/desktop" className="muted">Open desktop →</Link>
       </p>
-      <h1 style={{ marginTop: 0 }}>Invoke Grok Bot</h1>
-      <p style={{ color: "var(--muted)" }}>
-        Sends a webhook to the Bot routine. A 200 means the run started — check the
-        Bot chat for the result.{" "}
-        <Link href="/desktop">Open desktop</Link>
-      </p>
-      <form onSubmit={onInvoke}>
-        <label style={{ display: "block", marginBottom: 12 }}>
-          Task
-          <textarea
-            value={task}
-            onChange={(e) => setTask(e.target.value)}
-            required
-            rows={5}
-            style={{
-              display: "block",
-              width: "100%",
-              marginTop: 6,
-              padding: "0.75rem",
-              borderRadius: 8,
-              border: "1px solid var(--line)",
-              background: "var(--bg-elevated)",
-              color: "var(--ink)",
-              resize: "vertical",
-            }}
-          />
-        </label>
-        {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
-        {result?.ok ? (
-          <p style={{ color: "var(--muted)" }}>
-            Started (webhook {result.status}). requestId:{" "}
-            <code>{result.requestId}</code>
-          </p>
-        ) : null}
-        <button
-          type="submit"
-          disabled={loading || !task.trim()}
-          style={{
-            background: "var(--accent)",
-            color: "var(--accent-ink)",
-            border: 0,
-            borderRadius: 8,
-            padding: "0.7rem 1.1rem",
-            fontWeight: 600,
-          }}
-        >
-          {loading ? "Sending…" : "Run"}
-        </button>
-      </form>
+      <div className="hero">
+        <h1>Invoke Grok Bot</h1>
+        <p className="muted">
+          Sends a webhook to the Bot routine. A 200 means the run started — check the Bot chat for the result.
+        </p>
+        <form onSubmit={onInvoke} className="search-form">
+          <div className="field">
+            <label className="small" htmlFor="invoke-task">Task</label>
+            <textarea
+              id="invoke-task"
+              value={task}
+              onChange={(e) => setTask(e.target.value)}
+              required
+              rows={5}
+            />
+          </div>
+          {error && <p className="small" style={{ color: "var(--bad)" }}>{error}</p>}
+          {result?.ok && (
+            <p className="small muted">
+              Started (webhook {result.status}). requestId: <code className="mono">{result.requestId}</code>
+            </p>
+          )}
+          <div className="search-row">
+            <button type="submit" className="btn primary" disabled={loading || !task.trim()}>
+              {loading ? "Sending…" : "Run"}
+            </button>
+          </div>
+        </form>
+      </div>
     </main>
   );
 }
