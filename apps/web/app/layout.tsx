@@ -16,7 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             GRAIL<span>/</span>FINDER
           </Link>
           <nav className="nav">
-            <Link href="/">Opportunities</Link>
+            <Link href="/">Search</Link>
+            <Link href="/results">Browse all</Link>
             <Link href="/references">Target universe</Link>
             <Link href="/api/opportunities">API</Link>
           </nav>

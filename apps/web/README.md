@@ -14,7 +14,12 @@ Requires Node 20.9+.
 
 ## Pages
 
-- `/`: ranked opportunities with filters (Flagged, Needs review, Passed, No match)
+A four-step flow for briefing the agent, then its results:
+
+- `/`: step 1 — what are you looking for? Free text, with brand and example chips.
+- `/insider`: step 2 — insider information (brand misspellings, materials, colourway, distinguishing details), pre-filled from the reference set when your search matches a known brand.
+- `/requirements`: step 3 — purchase requirements (budget, shipping destination, sizes you'll take).
+- `/results`: step 4 — ranked opportunities, filtered/highlighted against your brief, with filters (Flagged, Needs review, Passed, No match), a confidence score and an ease-of-shipping read per listing based on your destination.
 - `/listing/[id]`: side-by-side visual evidence, OCR reads, comps, landed cost, and buy/ask/dismiss buttons (decisions are saved in your browser)
 - `/references`: the target universe (brands, variants, models, distinguishing details)
 - `/api/opportunities`: the pipeline output as JSON

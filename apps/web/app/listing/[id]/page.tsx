@@ -5,6 +5,7 @@ import { brandById, refById, refImageById } from "@/lib/data/references";
 import { SOURCE_COSTS } from "@/lib/config";
 import { normaliseText } from "@/lib/fuzzy";
 import { gbp, money, pct } from "@/lib/format";
+import { DEFAULT_DESTINATION, DESTINATIONS, EASE_TONE, isDestinationId, shippingEase } from "@/lib/destinations";
 import { ShoePhoto } from "@/components/ShoePhoto";
 import { Confidence } from "@/components/Confidence";
 import { DecisionPanel } from "@/components/Decision";
@@ -27,19 +28,37 @@ function Highlight({ text, match }: { text: string; match: string }) {
   );
 }
 
-export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
+type SearchParams = Record<string, string | undefined>;
+
+export default async function ListingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<SearchParams>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
   const o = getOpportunity(id);
   if (!o) notFound();
   const l = o.listing;
   const m = o.match;
   const ref = m ? refById(m.refId) : null;
   const src = SOURCE_COSTS[l.source];
+  const dest = isDestinationId(sp.dest) ? sp.dest : DEFAULT_DESTINATION;
+  const destInfo = DESTINATIONS.find((d) => d.id === dest)!;
+  const ease = shippingEase(l.source, dest);
+  const backQs = (() => {
+    const qp = new URLSearchParams();
+    for (const [k, v] of Object.entries(sp)) if (v) qp.set(k, v);
+    const s = qp.toString();
+    return s ? `?${s}` : "";
+  })();
 
   return (
     <main className="page">
       <p className="small" style={{ margin: "0 0 12px" }}>
-        <Link href="/" className="muted">← Opportunities</Link>
+        <Link href={`/results${backQs}`} className="muted">← Opportunities</Link>
       </p>
 
       <div className="detail">
@@ -233,6 +252,10 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
                 <div className="small muted num">range {gbp(o.valuation.low)} – {gbp(o.valuation.high)} · {o.valuation.comps.length} comps</div>
               </div>
             )}
+            <div className={`ease ${EASE_TONE[ease.level]}`} style={{ margin: "4px 0 14px" }}>
+              <span className="dot" /> {ease.label} shipping to {destInfo.flag} {destInfo.label} · {ease.days}
+              <div className="small muted" style={{ marginTop: 2 }}>{ease.note}</div>
+            </div>
             <div className="kv num" style={{ marginTop: 12 }}>
               {o.landed.lines.map((line) => (
                 <div key={line.label} style={{ display: "contents" }}>

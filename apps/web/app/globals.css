@@ -71,7 +71,48 @@ h3 { font-size: 14px; }
 .proto { margin-left: auto; font-size: 12px; color: var(--muted); border: 1px dashed var(--border); padding: 3px 8px; border-radius: 999px; }
 
 .page { max-width: 1180px; margin: 0 auto; padding: 28px 24px 64px; }
+.page-narrow { max-width: 640px; }
 .page-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+
+.hero { padding: 48px 0 0; }
+.hero h1 { margin-bottom: 10px; }
+.hero > p.muted { margin: 0 0 24px; }
+
+.search-form { display: flex; flex-direction: column; gap: 18px; }
+.search-form textarea {
+  width: 100%; font: inherit; font-size: 16px; padding: 14px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); resize: vertical;
+}
+.search-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.search-row .btn.primary { margin-left: auto; }
+select {
+  font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 600; }
+.field input[type="text"], .field input[type="number"] {
+  font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+
+.chiprow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip.pick {
+  font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--neutral-bg);
+  color: var(--text); border-radius: 999px; padding: 3px 10px; font-size: 12.5px;
+}
+.chip.pick:hover { border-color: color-mix(in srgb, var(--text) 30%, var(--border)); }
+.chip.hit { background: var(--good-bg); color: var(--good); }
+
+.ease { font-size: 13px; }
+.ease .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; background: var(--muted); }
+.ease.good .dot { background: var(--good); }
+.ease.good { color: var(--good); }
+.ease.warn .dot { background: var(--warn); }
+.ease.warn { color: var(--warn); }
+.ease.bad .dot { background: var(--bad); }
+.ease.bad { color: var(--bad); }
 
 .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
