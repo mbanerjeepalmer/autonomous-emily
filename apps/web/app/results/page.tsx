@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { runPipeline } from "@/lib/pipeline";
+import { ensureStoreHydrated } from "@/lib/sources/store";
 import { brandById, refById } from "@/lib/data/references";
 import { RULES, SOURCE_COSTS } from "@/lib/config";
 import { gbp, money, pct } from "@/lib/format";
@@ -32,6 +33,9 @@ type Params = {
   size?: string;
 };
 
+// Findings are submitted at runtime and must not become a build-time snapshot.
+export const dynamic = "force-dynamic";
+
 function qs(params: Params, overrides: Partial<Params> = {}) {
   const merged = { ...params, ...overrides };
   const sp = new URLSearchParams();
@@ -41,6 +45,7 @@ function qs(params: Params, overrides: Partial<Params> = {}) {
 }
 
 export default async function Results({ searchParams }: { searchParams: Promise<Params> }) {
+  await ensureStoreHydrated();
   const params = await searchParams;
   const { tab = "all", q, brand, material, color, details, size } = params;
   const dest = isDestinationId(params.dest) ? params.dest : DEFAULT_DESTINATION;

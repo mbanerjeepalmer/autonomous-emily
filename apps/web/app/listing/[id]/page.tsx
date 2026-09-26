@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOpportunity, runPipeline } from "@/lib/pipeline";
+import { ensureStoreHydrated } from "@/lib/sources/store";
 import { brandById, refById, refImageById } from "@/lib/data/references";
 import { SOURCE_COSTS } from "@/lib/config";
 import { normaliseText } from "@/lib/fuzzy";
@@ -13,6 +14,9 @@ import { DecisionPanel } from "@/components/Decision";
 export function generateStaticParams() {
   return runPipeline().map((o) => ({ id: o.listing.id }));
 }
+
+// Bot-supplied listing ids do not exist at build time.
+export const dynamic = "force-dynamic";
 
 const COMP_SOURCE = { grailed: "Grailed", ebay_sold: "eBay sold", stockx: "StockX", auction: "Auction" } as const;
 
@@ -37,6 +41,7 @@ export default async function ListingPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<SearchParams>;
 }) {
+  await ensureStoreHydrated();
   const { id } = await params;
   const sp = await searchParams;
   const o = getOpportunity(id);

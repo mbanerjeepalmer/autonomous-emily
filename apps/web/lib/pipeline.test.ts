@@ -4,6 +4,7 @@ import { fuzzyFind, normaliseText } from "./fuzzy.ts";
 import { runPipeline, getOpportunity, landedCost } from "./pipeline.ts";
 import { weightedQuantile } from "./valuation.ts";
 import { listingById } from "./data/listings.ts";
+import { upsertFindings } from "./sources/store.ts";
 
 test("OCR normalisation fixes common confusions", () => {
   assert.equal(normaliseText("VISV1M", true), "VISVIM");
@@ -55,4 +56,20 @@ test("landed cost adds VAT for imports, nothing for local pickup", () => {
 
 test("every listing is evaluated", () => {
   assert.equal(runPipeline().length, 11);
+});
+
+test("submitted findings are merged and invalidate the opportunity cache", async () => {
+  const fixture = listingById("fbm-2044")!;
+  const finding = {
+    ...fixture,
+    id: "bot:cache-invalidation",
+    title: "Bot-submitted unknown trainers",
+  };
+
+  await upsertFindings("run-cache-invalidation", [finding]);
+
+  const opportunity = getOpportunity(finding.id);
+  assert.equal(runPipeline().length, 12);
+  assert.equal(opportunity?.listing.title, finding.title);
+  assert.equal(opportunity?.status, "no-match");
 });

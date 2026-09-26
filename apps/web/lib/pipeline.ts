@@ -2,6 +2,7 @@
 // asking price → landed cost in London → vs comp value, weighted by match confidence.
 
 import { LISTINGS } from "./data/listings.ts";
+import { listFindings, setPipelineCacheInvalidator } from "./sources/store.ts";
 import { FX_TO_GBP, IMPORT, RULES, SOURCE_COSTS } from "./config.ts";
 import { matchListing } from "./match.ts";
 import { toGbp, valueItem } from "./valuation.ts";
@@ -92,10 +93,34 @@ export function evaluate(listing: Listing): Opportunity {
 
 let cache: Opportunity[] | null = null;
 
+/**
+ * Clear the derived opportunity cache after the findings store changes.
+ *
+ * The findings mirror is deliberately synchronous so the scoring functions can
+ * also be used from server components. New submissions call this through the
+ * store immediately after they are written to the mirror.
+ */
+export function invalidatePipelineCache(): void {
+  cache = null;
+}
+
+setPipelineCacheInvalidator(invalidatePipelineCache);
+
+function allListings(): Listing[] {
+  // A bot finding may be re-submitted, so use its id as the stable key rather
+  // than showing duplicate opportunities. Stored findings take precedence over
+  // fixture data if an id ever overlaps.
+  const listings = new Map(LISTINGS.map((listing) => [listing.id, listing]));
+  for (const finding of listFindings()) {
+    listings.set(finding.id, finding);
+  }
+  return Array.from(listings.values());
+}
+
 export function runPipeline(): Opportunity[] {
   if (!cache) {
     const order = { flagged: 0, review: 1, pass: 2, "no-match": 3 } as const;
-    cache = LISTINGS.map(evaluate).sort((a, b) => order[a.status] - order[b.status] || b.score - a.score);
+    cache = allListings().map(evaluate).sort((a, b) => order[a.status] - order[b.status] || b.score - a.score);
   }
   return cache;
 }

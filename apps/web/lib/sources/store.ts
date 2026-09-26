@@ -21,6 +21,12 @@ function runKey(requestId: string): string {
 const findingsMirror = new Map<string, Listing>();
 const runsMirror = new Map<string, RunRecord>();
 let hydratePromise: Promise<void> | null = null;
+let invalidatePipelineCache: (() => void) | null = null;
+
+/** Register the pipeline cache invalidator without coupling the store to Next's module resolver. */
+export function setPipelineCacheInvalidator(invalidator: () => void): void {
+  invalidatePipelineCache = invalidator;
+}
 
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -32,15 +38,7 @@ function getRedis(): Redis | null {
 }
 
 async function bumpPipelineCache(): Promise<void> {
-  // INTEGRATE: Agent C adds invalidatePipelineCache()
-  try {
-    const mod = await import("@/lib/pipeline");
-    if (typeof mod.invalidatePipelineCache === "function") {
-      mod.invalidatePipelineCache();
-    }
-  } catch {
-    // pipeline cache invalidation not available yet
-  }
+  invalidatePipelineCache?.();
 }
 
 async function loadFromRedis(): Promise<void> {
@@ -58,6 +56,9 @@ async function loadFromRedis(): Promise<void> {
         findingsMirror.set(ids[i]!, listing);
       }
     }
+    // A static-params pass may have populated the pipeline before hydration.
+    // Clear it so the newly loaded mirror is included in the next render.
+    invalidatePipelineCache?.();
   }
 }
 
