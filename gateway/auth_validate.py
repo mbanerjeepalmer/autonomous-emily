@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Caddy forward_auth validator for desktop JWT tokens issued by the Next.js app."""
+"""Caddy forward_auth validator + /enter cookie bootstrap for desktop JWTs."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import json
 import os
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 SECRET = os.environ.get("DESKTOP_JWT_SECRET", "").encode("utf-8")
 LISTEN = os.environ.get("DESKTOP_AUTH_LISTEN", "127.0.0.1:8091")
@@ -50,6 +50,13 @@ def verify_jwt(token: str) -> dict | None:
     return payload
 
 
+def session_cookie(token: str) -> str:
+    # SameSite=None so the Vercel iframe can send the cookie on WS/asset requests
+    return (
+        f"{COOKIE}={token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=3600"
+    )
+
+
 def extract_token(handler: BaseHTTPRequestHandler) -> str | None:
     auth = handler.headers.get("Authorization", "")
     if auth.lower().startswith("bearer "):
@@ -61,7 +68,6 @@ def extract_token(handler: BaseHTTPRequestHandler) -> str | None:
         if name == COOKIE and value:
             return value
 
-    # Original request URI from Caddy forward_auth
     original = handler.headers.get("X-Forwarded-Uri") or handler.path
     query = parse_qs(urlparse(original).query)
     if "token" in query and query["token"]:
@@ -74,12 +80,10 @@ class Handler(BaseHTTPRequestHandler):
         return
 
     def do_GET(self) -> None:
-        if urlparse(self.path).path not in ("/validate", "/healthz"):
-            self.send_response(404)
-            self.end_headers()
-            return
+        parsed = urlparse(self.path)
+        path = parsed.path
 
-        if urlparse(self.path).path == "/healthz":
+        if path == "/healthz":
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
             self.end_headers()
@@ -88,6 +92,34 @@ class Handler(BaseHTTPRequestHandler):
 
         if not SECRET:
             self.send_response(500)
+            self.end_headers()
+            return
+
+        # /enter?token=… — set cookie then redirect so CSS/JS/WebSocket auth via cookie
+        if path == "/enter":
+            qs = parse_qs(parsed.query)
+            token = (qs.get("token") or [None])[0]
+            claims = verify_jwt(token) if token else None
+            if not claims or not token:
+                self.send_response(401)
+                self.send_header("Content-Type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"invalid or missing token")
+                return
+
+            dest_qs = {
+                "autoconnect": (qs.get("autoconnect") or ["1"])[0],
+                "resize": (qs.get("resize") or ["remote"])[0],
+            }
+            location = f"/vnc.html?{urlencode(dest_qs)}"
+            self.send_response(302)
+            self.send_header("Set-Cookie", session_cookie(token))
+            self.send_header("Location", location)
+            self.end_headers()
+            return
+
+        if path != "/validate":
+            self.send_response(404)
             self.end_headers()
             return
 
@@ -100,12 +132,6 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_response(200)
         self.send_header("Remote-User", str(claims.get("sub", "desktop")))
-        # Persist token for websocket upgrades that may omit the query string
-        if token:
-            self.send_header(
-                "Set-Cookie",
-                f"{COOKIE}={token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=3600",
-            )
         self.end_headers()
 
     def do_OPTIONS(self) -> None:

@@ -3,16 +3,21 @@ __DESKTOP_PUBLIC_HOST__ {
 	encode gzip
 
 	header {
-		# Allow the Vercel Next.js app to iframe the desktop
 		Content-Security-Policy "frame-ancestors __FRAME_ANCESTORS__"
 		-X-Frame-Options
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	}
 
-	forward_auth 127.0.0.1:8091 {
-		uri /validate
-		copy_headers Remote-User
+	# Cookie bootstrap: /enter?token=JWT → Set-Cookie → redirect to vnc.html
+	handle /enter* {
+		reverse_proxy 127.0.0.1:8091
 	}
 
-	reverse_proxy 127.0.0.1:6080
+	handle {
+		forward_auth 127.0.0.1:8091 {
+			uri /validate
+			copy_headers Remote-User
+		}
+		reverse_proxy 127.0.0.1:6080
+	}
 }

@@ -55,13 +55,12 @@ export function desktopPublicOrigin(): string {
 
 export function buildDesktopViewerUrl(token: string): string {
   const origin = desktopPublicOrigin();
+  // /enter sets an HttpOnly cookie then redirects to vnc.html so CSS/JS/WebSocket
+  // requests authenticate without needing ?token= on every asset.
   const params = new URLSearchParams({
+    token,
     autoconnect: "1",
     resize: "remote",
-    // Pass token on the page load and on the WebSocket path so Caddy
-    // forward_auth can validate both the HTML and upgrade requests.
-    token,
-    path: `websockify?token=${token}`,
   });
-  return `${origin}/vnc.html?${params.toString()}`;
+  return `${origin}/enter?${params.toString()}`;
 }
