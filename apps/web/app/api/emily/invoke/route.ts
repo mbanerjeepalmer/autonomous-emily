@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { readAppSession } from "@/lib/auth";
+import { BARGAIN_GOAL } from "@/lib/agent/brief";
 import { publicMcpUrl } from "@/lib/mcp-url";
 import { markRunPending } from "@/lib/sources/store";
 
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
 
   const payload = {
     task,
+    goal: BARGAIN_GOAL,
     context: body.context ?? null,
     requestId,
     mcpUrl: publicMcpUrl(),
@@ -87,7 +89,12 @@ export async function POST(request: Request) {
     );
   }
 
-  await markRunPending(requestId);
+  try {
+    await markRunPending(requestId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to persist run";
+    return NextResponse.json({ ok: false, requestId, error: message }, { status: 500 });
+  }
 
   return NextResponse.json({
     ok: true,

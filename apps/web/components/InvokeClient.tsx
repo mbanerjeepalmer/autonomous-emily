@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import type { DiscoveryFinding } from "@/lib/agent/discoveryAgent";
 
 type RunStatus = "pending" | "submitted" | "empty";
 
@@ -11,7 +10,6 @@ type InvokeResult = {
   status?: number | RunStatus;
   requestId?: string;
   error?: string;
-  findings?: DiscoveryFinding[];
 };
 
 type PolledRun = {
@@ -26,14 +24,13 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
   const [task, setTask] = useState(
     "Find Japanese designer footwear listings for sale",
   );
-  const [provider, setProvider] = useState<"grok" | "pi">("grok");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<InvokeResult | null>(null);
   const [run, setRun] = useState<PolledRun | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (provider !== "grok" || !result?.ok || !result.requestId) return;
+    if (!result?.ok || !result.requestId) return;
     const requestId = result.requestId;
     let cancelled = false;
     let attempts = 0;
@@ -70,7 +67,7 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [provider, result]);
+  }, [result]);
 
   async function onLogin(event: FormEvent) {
     event.preventDefault();
@@ -100,10 +97,10 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
     setResult(null);
     setRun(null);
     try {
-      const res = await fetch(provider === "grok" ? "/api/emily/invoke" : "/api/discover", {
+      const res = await fetch("/api/emily/invoke", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(provider === "grok" ? { task } : { query: task }),
+        body: JSON.stringify({ task }),
       });
       const data = (await res.json()) as InvokeResult;
       if (!res.ok) {
@@ -156,42 +153,9 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
       <div className="hero">
         <h1>Run a sourcing agent</h1>
         <p className="muted">
-          Operator shortcut. The main search flow also starts Grok Bot (or Pi if
-          toggled) from results. Grok Bot sends findings back through MCP; Pi
-          searches with Tavily and stores them for scoring.
+          Operator shortcut. The main search flow starts Grok Bot from results. Grok Bot sends findings back through MCP.
         </p>
         <form onSubmit={onInvoke} className="search-form">
-          <fieldset disabled={loading} className="field">
-            <legend className="small">Agent</legend>
-            <label style={{ marginRight: 20 }}>
-              <input
-                type="radio"
-                name="provider"
-                checked={provider === "grok"}
-                onChange={() => {
-                  setProvider("grok");
-                  setResult(null);
-                  setRun(null);
-                  setError(null);
-                }}
-              />{" "}
-              Grok Bot
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="provider"
-                checked={provider === "pi"}
-                onChange={() => {
-                  setProvider("pi");
-                  setResult(null);
-                  setRun(null);
-                  setError(null);
-                }}
-              />{" "}
-              Pi
-            </label>
-          </fieldset>
           <div className="field">
             <label className="small" htmlFor="invoke-task">Task</label>
             <textarea
@@ -203,7 +167,7 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
             />
           </div>
           {error && <p className="small" style={{ color: "var(--bad)" }}>{error}</p>}
-          {result?.ok && provider === "grok" ? (
+          {result?.ok ? (
             <p className="small muted">
               Started (webhook {result.status}). requestId:{" "}
               <code className="mono">{result.requestId}</code>.{" "}
@@ -215,23 +179,6 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
                 <>Waiting for MCP submit… Check <Link href="/results">results</Link> or <Link href="/desktop">Bot chat</Link>.</>
               )}
             </p>
-          ) : null}
-          {result?.ok && provider === "pi" ? (
-            <section aria-live="polite">
-              <h2>Pi findings</h2>
-              {result.requestId ? (
-                <p className="small muted">
-                  Stored as request <code className="mono">{result.requestId}</code>. Open <Link href="/results">results</Link> to score them.
-                </p>
-              ) : null}
-              {result.findings?.length ? result.findings.map((finding) => (
-                <p key={finding.url}>
-                  <a href={finding.url} target="_blank" rel="noopener noreferrer">{finding.title}</a>
-                  {finding.source ? ` · ${finding.source}` : ""}{finding.price ? ` · ${finding.price}` : ""}
-                  {finding.snippet ? <><br /><span className="muted">{finding.snippet}</span></> : null}
-                </p>
-              )) : <p>No listings found for this task.</p>}
-            </section>
           ) : null}
           <div className="search-row">
             <button type="submit" className="btn primary" disabled={loading || !task.trim()}>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { runPipeline } from "@/lib/pipeline";
-import { refreshFindings } from "@/lib/sources/store";
+import { hydrateRunFindings, refreshFindings } from "@/lib/sources/store";
 import { RULES } from "@/lib/config";
 import { gbp, pct } from "@/lib/format";
 import { DESTINATIONS, DEFAULT_DESTINATION, isDestinationId } from "@/lib/destinations";
@@ -9,7 +9,6 @@ import { OpportunityRow } from "@/components/OpportunityRow";
 import { RefineBar } from "@/components/RefineBar";
 import { AgentRun } from "@/components/AgentRun";
 import { readAppSession } from "@/lib/auth";
-import { parseAgent } from "@/lib/agent/provider";
 import type { Opportunity } from "@/lib/types";
 
 const TABS = [
@@ -51,7 +50,7 @@ type Params = {
   notes?: string;
   budget?: string;
   size?: string;
-  agent?: string;
+  requestId?: string;
 };
 
 // Findings are submitted at runtime and must not become a build-time snapshot.
@@ -66,10 +65,10 @@ function qs(params: Params, overrides: Partial<Params> = {}) {
 }
 
 export default async function Results({ searchParams }: { searchParams: Promise<Params> }) {
-  await refreshFindings();
-  const signedIn = await readAppSession();
   const params = await searchParams;
-  const agent = parseAgent(params.agent);
+  await refreshFindings();
+  if (params.requestId) await hydrateRunFindings(params.requestId);
+  const signedIn = await readAppSession();
   const { tab = "all", q, brand, material, color, details, notes, size } = params;
   const dest = isDestinationId(params.dest) ? params.dest : DEFAULT_DESTINATION;
   const destInfo = DESTINATIONS.find((d) => d.id === dest)!;
@@ -130,9 +129,9 @@ export default async function Results({ searchParams }: { searchParams: Promise<
 
       {searching && (
         <AgentRun
-          agent={agent}
           initiallySignedIn={signedIn}
           queryString={qs(params).replace(/^\?/, "")}
+          requestId={params.requestId}
           brief={{
             query: q || [brand, material, color, details].filter(Boolean).join(" "),
             brand, material, color, details, notes, budget, destination: destInfo.label, size,
@@ -178,7 +177,7 @@ export default async function Results({ searchParams }: { searchParams: Promise<
           <p className="muted">
             {searching
               ? "No live listings yet for this brief — Emily is searching, or nothing usable came back."
-              : "No live listings yet. Start a search and Emily will send Grok Bot (or Pi) out."}
+              : "No live listings yet. Start a search and Emily will send Grok Bot out."}
           </p>
         )}
       </div>

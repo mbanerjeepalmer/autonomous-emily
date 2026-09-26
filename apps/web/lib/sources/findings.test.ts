@@ -35,7 +35,7 @@ test("rejects an unusable finding before it reaches the results UI", () => {
   assert.throws(() => toListing({ ...finding, photos: [] }), /at least one photo/);
 });
 
-test("maps a Tavily/Pi hit without inventing a photo URL", () => {
+test("maps a search hit without inventing a photo URL", () => {
   const listing = listingFromLooseFinding({
     title: "visvim FBT",
     url: "https://www.ebay.com/itm/999",

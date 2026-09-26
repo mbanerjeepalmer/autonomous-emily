@@ -2,7 +2,10 @@
  * Upstash-backed findings / run store with an in-process mirror.
  *
  * listFindings() stays sync for pipeline SSR: mirror is updated on upsert
- * and filled once from Redis via ensureStoreHydrated().
+ * and filled from Redis via refreshFindings() / hydrateRunFindings().
+ *
+ * Writes fail closed when Redis is required (Vercel / EMILY_REQUIRE_REDIS)
+ * so a run cannot report "submitted" without listings other isolates can read.
  */
 import { Redis } from "@upstash/redis";
 import type { Listing } from "@/lib/types";
@@ -28,6 +31,17 @@ export function setPipelineCacheInvalidator(invalidator: () => void): void {
   invalidatePipelineCache = invalidator;
 }
 
+export function missingRedisWriteError(
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  const required = Boolean(env.VERCEL || env.EMILY_REQUIRE_REDIS === "1");
+  if (!required) return null;
+  if (!env.UPSTASH_REDIS_REST_URL?.trim() || !env.UPSTASH_REDIS_REST_TOKEN?.trim()) {
+    return "UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not configured";
+  }
+  return null;
+}
+
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -35,6 +49,32 @@ function getRedis(): Redis | null {
     return null;
   }
   return new Redis({ url, token });
+}
+
+function redisForWrite(): Redis | null {
+  const missing = missingRedisWriteError();
+  if (missing) throw new Error(missing);
+  return getRedis();
+}
+
+function asListing(value: unknown): Listing | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const listing = value as Listing;
+  return typeof listing.id === "string" && listing.id ? listing : null;
+}
+
+function putListings(ids: string[], values: unknown[]): void {
+  for (let i = 0; i < ids.length; i++) {
+    const listing = asListing(values[i]);
+    if (listing) findingsMirror.set(ids[i]!, listing);
+  }
+}
+
+async function loadListingsByIds(redis: Redis, ids: string[]): Promise<void> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return;
+  const values = await redis.mget<(Listing | null)[]>(...unique.map(findingKey));
+  putListings(unique, Array.isArray(values) ? values : [values]);
 }
 
 async function bumpPipelineCache(): Promise<void> {
@@ -49,17 +89,11 @@ async function loadFromRedis(): Promise<void> {
 
   const ids = (await redis.smembers(FINDING_IDS_KEY)) as string[];
   if (ids.length > 0) {
-    const values = await redis.mget<Listing[]>(...ids.map(findingKey));
-    for (let i = 0; i < ids.length; i++) {
-      const listing = values[i];
-      if (listing && typeof listing === "object") {
-        findingsMirror.set(ids[i]!, listing);
-      }
-    }
-    // A static-params pass may have populated the pipeline before hydration.
-    // Clear it so the newly loaded mirror is included in the next render.
-    invalidatePipelineCache?.();
+    await loadListingsByIds(redis, ids);
   }
+  // Always drop a stale empty pipeline cache — a prior SSR on this isolate
+  // may have scored [] before this run's listings existed.
+  invalidatePipelineCache?.();
 }
 
 /** Hydrate the in-process mirror from Redis once (safe to call repeatedly). */
@@ -73,7 +107,7 @@ export async function ensureStoreHydrated(): Promise<void> {
   await hydratePromise;
 }
 
-/** Re-read findings from Redis so a later request sees MCP / Pi submissions. */
+/** Re-read findings from Redis so a later request sees MCP submissions. */
 export async function refreshFindings(): Promise<void> {
   hydratePromise = loadFromRedis().catch((err) => {
     hydratePromise = null;
@@ -82,27 +116,41 @@ export async function refreshFindings(): Promise<void> {
   await hydratePromise;
 }
 
+/**
+ * Load the listings named on a run record. The results page uses this so a
+ * submitted run still renders even if `finding:ids` is incomplete.
+ */
+export async function hydrateRunFindings(requestId: string): Promise<RunRecord | null> {
+  const id = requestId.trim();
+  if (!id) return null;
+
+  const run = await getRun(id);
+  if (!run) return null;
+
+  const redis = getRedis();
+  if (redis && run.findingIds.length > 0) {
+    await loadListingsByIds(redis, run.findingIds);
+  }
+  invalidatePipelineCache?.();
+  return run;
+}
+
 /** Sync snapshot for pipeline merge. Call ensureStoreHydrated() first on cold start. */
 export function listFindings(): Listing[] {
   return Array.from(findingsMirror.values());
 }
 
 export async function getRun(requestId: string): Promise<RunRecord | null> {
-  const cached = runsMirror.get(requestId);
-  if (cached) {
-    return cached;
-  }
-
   const redis = getRedis();
-  if (!redis) {
-    return null;
+  if (redis) {
+    const record = await redis.get<RunRecord>(runKey(requestId));
+    if (record) {
+      runsMirror.set(requestId, record);
+      return record;
+    }
   }
 
-  const record = await redis.get<RunRecord>(runKey(requestId));
-  if (record) {
-    runsMirror.set(requestId, record);
-  }
-  return record ?? null;
+  return runsMirror.get(requestId) ?? null;
 }
 
 /** Record that a run was started so the invoke UI can poll before findings arrive. */
@@ -111,16 +159,16 @@ export async function markRunPending(requestId: string): Promise<RunRecord> {
   if (!id) throw new Error("requestId is required");
 
   await ensureStoreHydrated();
-  const existing = runsMirror.get(id);
+  const existing = (await getRun(id)) ?? runsMirror.get(id);
   const record: RunRecord = {
     requestId: id,
     updatedAt: new Date().toISOString(),
     findingIds: existing?.findingIds ?? [],
-    status: "pending",
+    status: existing?.status === "submitted" || existing?.status === "empty" ? existing.status : "pending",
   };
   runsMirror.set(id, record);
 
-  const redis = getRedis();
+  const redis = redisForWrite();
   if (redis) {
     await redis.set(runKey(id), record);
   }
@@ -149,7 +197,7 @@ export async function upsertFindings(
   }
   runsMirror.set(requestId, record);
 
-  const redis = getRedis();
+  const redis = redisForWrite();
   if (redis) {
     const pipeline = redis.pipeline();
     for (const listing of listings) {

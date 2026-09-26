@@ -13,7 +13,7 @@ npm install
 npm run dev            # http://localhost:3000
 ```
 
-- Product: `/` → `/insider` → `/requirements` → `/results` (starts Grok Bot, or Pi if toggled)
+- Product: `/` → `/insider` → `/requirements` → `/results` (starts Grok Bot)
 - Operator invoke: `/invoke`
 - Remote desktop: `/desktop`
 

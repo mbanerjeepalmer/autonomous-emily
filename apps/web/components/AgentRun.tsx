@@ -4,14 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { briefToPrompt, type DiscoveryBrief } from "@/lib/agent/brief";
-import {
-  agentLabel,
-  agentRunStorageKey,
-  parseAgent,
-  writeStoredAgent,
-  type AgentId,
-} from "@/lib/agent/provider";
-import { AgentToggle } from "@/components/AgentToggle";
+import { agentRunStorageKey } from "@/lib/agent/provider";
 import { GateSignIn } from "@/components/GateSignIn";
 
 type RunStatus = "pending" | "submitted" | "empty";
@@ -47,6 +40,12 @@ function writeSnapshot(key: string, snap: RunSnapshot): void {
   }
 }
 
+function withRequestId(queryString: string, requestId: string): string {
+  const params = new URLSearchParams(queryString);
+  params.set("requestId", requestId);
+  return params.toString();
+}
+
 class AuthRequiredError extends Error {
   constructor() {
     super("Unauthorized");
@@ -54,11 +53,11 @@ class AuthRequiredError extends Error {
   }
 }
 
-async function invokeAgent(brief: DiscoveryBrief, agent: AgentId): Promise<RunSnapshot> {
-  const res = await fetch(agent === "grok" ? "/api/emily/invoke" : "/api/discover", {
+async function invokeAgent(brief: DiscoveryBrief): Promise<RunSnapshot> {
+  const res = await fetch("/api/emily/invoke", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(agent === "grok" ? { task: briefToPrompt(brief), context: brief } : brief),
+    body: JSON.stringify({ task: briefToPrompt(brief), context: brief }),
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) throw new AuthRequiredError();
@@ -69,25 +68,24 @@ async function invokeAgent(brief: DiscoveryBrief, agent: AgentId): Promise<RunSn
   const requestId = typeof data.requestId === "string" ? data.requestId : "";
   if (!requestId) throw new Error("Agent did not return a requestId");
 
-  if (agent === "pi") {
-    const findings = Array.isArray(data.findings) ? data.findings : [];
-    const status: RunStatus = data.status === "empty" || findings.length === 0 ? "empty" : "submitted";
-    return { requestId, status, findingCount: findings.length };
-  }
-
   return { requestId, status: "pending", findingCount: 0 };
 }
 
-async function startOrResume(brief: DiscoveryBrief, agent: AgentId): Promise<RunSnapshot> {
-  const key = agentRunStorageKey(briefKey(brief), agent);
+async function startOrResume(brief: DiscoveryBrief, pinnedId?: string): Promise<RunSnapshot> {
+  const key = agentRunStorageKey(briefKey(brief));
+  if (pinnedId) {
+    const stored = readSnapshot(key);
+    if (stored?.requestId === pinnedId) return stored;
+    return { requestId: pinnedId, status: "pending", findingCount: 0 };
+  }
+
   const stored = readSnapshot(key);
-  if (stored?.requestId && stored.status !== "pending") return stored;
-  if (stored?.requestId && stored.status === "pending") return stored;
+  if (stored?.requestId) return stored;
 
   const existing = inFlight.get(key);
   if (existing) return existing;
 
-  const work = invokeAgent(brief, agent).then((snap) => {
+  const work = invokeAgent(brief).then((snap) => {
     writeSnapshot(key, snap);
     return snap;
   });
@@ -114,83 +112,91 @@ async function pollRun(requestId: string): Promise<RunSnapshot | null> {
 
 export function AgentRun({
   brief,
-  agent: initialAgent,
   initiallySignedIn,
   queryString,
+  requestId: urlRequestId,
 }: {
   brief: DiscoveryBrief;
-  agent: AgentId;
   initiallySignedIn: boolean;
   queryString: string;
+  requestId?: string;
 }) {
   const router = useRouter();
-  const agent = parseAgent(initialAgent);
   const key = useMemo(() => briefKey(brief), [brief]);
   const briefRef = useRef(brief);
   briefRef.current = brief;
+  const queryRef = useRef(queryString);
+  queryRef.current = queryString;
 
   const [signedIn, setSignedIn] = useState(initiallySignedIn);
   const [run, setRun] = useState<RunSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
 
-  function setAgent(next: AgentId) {
-    writeStoredAgent(next);
-    const params = new URLSearchParams(queryString);
-    params.set("agent", next);
-    const nextQs = params.toString();
-    router.replace(nextQs ? `/results?${nextQs}` : "/results");
-  }
-
   useEffect(() => {
     if (!signedIn) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const storageKey = agentRunStorageKey(key, agent);
+    const storageKey = agentRunStorageKey(key);
+
+    const pinUrl = (requestId: string) => {
+      const next = withRequestId(queryRef.current, requestId);
+      const current = new URLSearchParams(queryRef.current).get("requestId");
+      if (current === requestId) return;
+      router.replace(next ? `/results?${next}` : "/results");
+    };
 
     const apply = (snap: RunSnapshot, { refresh }: { refresh: boolean }) => {
       if (cancelled) return;
       setRun(snap);
       writeSnapshot(storageKey, snap);
-      if (refresh && snap.status !== "pending") router.refresh();
+      pinUrl(snap.requestId);
+      if (refresh) router.refresh();
+    };
+
+    const pollUntilSettled = (requestId: string) => {
+      let attempts = 0;
+      const tick = async () => {
+        attempts += 1;
+        try {
+          const next = await pollRun(requestId);
+          if (cancelled) return;
+          if (next && next.status !== "pending") {
+            apply(next, { refresh: true });
+            return;
+          }
+          if (next) setRun(next);
+        } catch (err) {
+          if (err instanceof AuthRequiredError) {
+            setSignedIn(false);
+            return;
+          }
+        }
+        if (!cancelled && attempts < MAX_POLL_ATTEMPTS) {
+          timer = setTimeout(tick, POLL_MS);
+        }
+      };
+      timer = setTimeout(tick, POLL_MS);
     };
 
     const start = async () => {
       setError(null);
       setStarting(true);
       try {
-        const prior = readSnapshot(storageKey);
-        if (prior?.status === "submitted" || prior?.status === "empty") {
-          setRun(prior);
+        const snap = await startOrResume(briefRef.current, urlRequestId);
+        if (cancelled) return;
+
+        const live = await pollRun(snap.requestId);
+        if (cancelled) return;
+
+        if (live) {
+          apply(live, { refresh: true });
+          if (live.status === "pending") pollUntilSettled(live.requestId);
           return;
         }
-        const snap = await startOrResume(briefRef.current, agent);
-        if (cancelled) return;
-        apply(snap, { refresh: snap.status !== "pending" });
-        if (agent !== "grok" || snap.status !== "pending") return;
 
-        let attempts = 0;
-        const tick = async () => {
-          attempts += 1;
-          try {
-            const next = await pollRun(snap.requestId);
-            if (cancelled) return;
-            if (next && next.status !== "pending") {
-              apply(next, { refresh: true });
-              return;
-            }
-            if (next) setRun(next);
-          } catch (err) {
-            if (err instanceof AuthRequiredError) {
-              setSignedIn(false);
-              return;
-            }
-          }
-          if (!cancelled && attempts < MAX_POLL_ATTEMPTS) {
-            timer = setTimeout(tick, POLL_MS);
-          }
-        };
-        timer = setTimeout(tick, POLL_MS);
+        apply(snap, { refresh: snap.status !== "pending" });
+        if (snap.status === "pending") pollUntilSettled(snap.requestId);
       } catch (err) {
         if (cancelled) return;
         if (err instanceof AuthRequiredError) {
@@ -211,9 +217,9 @@ export function AgentRun({
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [agent, key, router, signedIn]);
+  }, [key, router, signedIn, urlRequestId]);
 
-  const name = agentLabel(agent);
+  const name = "Grok Bot";
   const waiting = signedIn && (starting || run?.status === "pending");
 
   return (
@@ -237,19 +243,14 @@ export function AgentRun({
             {!signedIn
               ? "Same operator password as the desktop. Findings are scored in the list below."
               : waiting
-                ? agent === "grok"
-                  ? "Webhook is fire-and-forget. New listings appear here once Grok Bot submits through MCP."
-                  : "Pi is searching live marketplaces through Tavily. This can take up to a minute."
+                ? "Webhook is fire-and-forget. New listings appear here once Grok Bot submits through MCP."
                 : run?.status === "submitted"
                   ? "Those listings are scored with the rest of the pipeline below."
                   : run?.status === "empty"
-                    ? agent === "grok"
-                      ? "Check the Bot chat if you expected hits."
-                      : "Try a broader brief, or switch back to Grok Bot."
-                    : "Grok Bot is the default. Toggle Pi on if you want the in-process scout instead."}
+                    ? "Check the Bot chat if you expected hits."
+                    : "Grok Bot will search this brief."}
           </p>
         </div>
-        <AgentToggle value={agent} onChange={setAgent} />
       </div>
 
       {!signedIn && (
@@ -267,12 +268,8 @@ export function AgentRun({
       {signedIn && run?.requestId && (
         <p className="small muted" style={{ margin: "12px 0 0" }}>
           requestId <code className="mono">{run.requestId}</code>
-          {agent === "grok" ? (
-            <>
-              {" · "}
-              <Link href="/desktop">Bot chat</Link>
-            </>
-          ) : null}
+          {" · "}
+          <Link href="/desktop">Bot chat</Link>
         </p>
       )}
     </section>

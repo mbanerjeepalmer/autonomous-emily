@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AgentToggle } from "@/components/AgentToggle";
 
 export function SearchForm() {
   const [q, setQ] = useState("");
@@ -71,7 +70,6 @@ export function SearchForm() {
         </button>
       </div>
 
-      <AgentToggle name="agent" align="center" variant="landing" />
     </form>
   );
 }

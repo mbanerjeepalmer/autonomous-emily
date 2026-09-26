@@ -122,7 +122,7 @@ function externalIdFromUrl(url: string): string {
 }
 
 /**
- * Map a live Tavily/Pi hit into a Listing when the bot-facing RawFinding
+ * Map a live search hit into a Listing when the bot-facing RawFinding
  * contract cannot be filled (no photo URLs, messy price strings).
  */
 export function listingFromLooseFinding(raw: LooseFinding): Listing {
