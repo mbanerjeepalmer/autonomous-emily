@@ -1,30 +1,25 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Playfair_Display } from "next/font/google";
+import { TopBar } from "@/components/TopBar";
 import "./globals.css";
 
+const serif = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  style: ["normal", "italic"],
+  weight: ["500", "600"],
+});
+
 export const metadata: Metadata = {
-  title: "Emily",
+  title: "Autono Emily",
   description: "Finds under-catalogued Japanese designer footwear across messy marketplaces.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={serif.variable}>
       <body>
-        <header className="topbar">
-          <Link href="/" className="brand">
-            GRAIL<span>/</span>FINDER
-          </Link>
-          <nav className="nav">
-            <Link href="/">Search</Link>
-            <Link href="/results">Browse all</Link>
-            <Link href="/references">Target universe</Link>
-            <Link href="/invoke">Invoke</Link>
-            <Link href="/desktop">Desktop</Link>
-            <Link href="/api/opportunities">API</Link>
-          </nav>
-          <span className="proto">Prototype · hard-coded data</span>
-        </header>
+        <TopBar />
         {children}
       </body>
     </html>

@@ -2,10 +2,10 @@ import Link from "next/link";
 import { suggestHints } from "@/lib/suggest";
 import { InsiderForm } from "@/components/InsiderForm";
 
-type Params = { q?: string; brand?: string; material?: string; color?: string; details?: string };
+type Params = { q?: string; brand?: string; material?: string; color?: string; details?: string; notes?: string };
 
 export default async function Insider({ searchParams }: { searchParams: Promise<Params> }) {
-  const { q = "", brand, material, color, details } = await searchParams;
+  const { q = "", brand, material, color, details, notes } = await searchParams;
   const s = suggestHints(q);
 
   return (
@@ -32,7 +32,7 @@ export default async function Insider({ searchParams }: { searchParams: Promise<
           detailChips={s.detailChips}
           keywordChips={s.keywordChips}
           colorChips={s.colorChips}
-          initial={{ brand, material, color, details }}
+          initial={{ brand, material, color, details, notes }}
         />
       </div>
     </main>

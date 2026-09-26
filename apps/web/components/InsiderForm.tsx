@@ -48,7 +48,7 @@ export function InsiderForm({
   detailChips: string[];
   keywordChips: string[];
   colorChips: string[];
-  initial?: { brand?: string; material?: string; color?: string; details?: string };
+  initial?: { brand?: string; material?: string; color?: string; details?: string; notes?: string };
 }) {
   return (
     <form action="/requirements" method="GET" className="search-form">
@@ -82,6 +82,17 @@ export function InsiderForm({
         chips={[...detailChips, ...keywordChips]}
         initial={initial.details}
       />
+
+      <div className="field insider-note">
+        <label className="small" htmlFor="notes">Anything else that might help</label>
+        <textarea
+          id="notes"
+          name="notes"
+          rows={3}
+          placeholder={'Anything at all — e.g. "I think this is listed more on Japanese sites" or "seller might have it under a different spelling"'}
+          defaultValue={initial.notes}
+        />
+      </div>
 
       <div className="search-row">
         <button type="submit" className="btn primary">Next: purchase requirements →</button>
