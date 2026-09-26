@@ -47,7 +47,8 @@ flowchart LR
 ## Implemented (invoke / desktop)
 
 - `POST /api/emily/invoke` — session or `EMILY_INVOKE_SECRET` Bearer
-- `/invoke` UI
+- `/invoke` UI — choose Grok Bot or Pi per task. Grok Bot starts the webhook/MCP findings loop; Pi calls `/api/discover`, shows live Tavily findings, and stores them for scoring on `/results`.
+- `POST /api/discover` — session protected Pi discovery agent; requires `OPENROUTER_API_KEY` and `TAVILY_API_KEY` (optional `DISCOVERY_AGENT_MODEL`)
 - `/desktop` noVNC via `/enter` cookie JWT
 - Auth: `APP_GATE_PASSWORD` / `SESSION_SECRET`
 

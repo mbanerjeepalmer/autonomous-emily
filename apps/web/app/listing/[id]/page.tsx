@@ -89,7 +89,7 @@ export default async function ListingPage({
             <div className="gallery">
               {l.photos.map((p) => (
                 <figure key={p.id} style={{ margin: 0 }}>
-                  <ShoePhoto sketch={p.sketch} kind={p.kind} uid={`g-${p.id}`} />
+                  <ShoePhoto sketch={p.sketch} kind={p.kind} uid={`g-${p.id}`} url={p.url} />
                   <figcaption className="small muted">{p.kind}</figcaption>
                 </figure>
               ))}
@@ -106,7 +106,7 @@ export default async function ListingPage({
                   return (
                     <div className="pair" key={p.id}>
                       <figure>
-                        <ShoePhoto sketch={p.sketch} kind={p.kind} uid={`l-${p.id}`} />
+                        <ShoePhoto sketch={p.sketch} kind={p.kind} uid={`l-${p.id}`} url={p.url} />
                         <figcaption>Listing · {p.kind}</figcaption>
                       </figure>
                       <div className="sim">

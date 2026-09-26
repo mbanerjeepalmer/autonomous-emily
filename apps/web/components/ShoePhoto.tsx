@@ -1,5 +1,5 @@
-// Placeholder "photos" drawn in SVG so the prototype has no image assets.
-// Replace with <img src={photo.url}> once listings come from real sources.
+// Prototype photos are SVG sketches. Bot-submitted listings keep a real
+// image URL and render that instead.
 
 import type { PhotoKind, Sketch } from "@/lib/types";
 
@@ -139,7 +139,30 @@ function DetailView({ s, uid }: { s: Sketch; uid: string }) {
   );
 }
 
-export function ShoePhoto({ sketch, kind, uid, className }: { sketch: Sketch; kind: PhotoKind; uid: string; className?: string }) {
+export function ShoePhoto({
+  sketch,
+  kind,
+  uid,
+  className,
+  url,
+}: {
+  sketch: Sketch;
+  kind: PhotoKind;
+  uid: string;
+  className?: string;
+  url?: string;
+}) {
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt={`${kind} photo`}
+        className={className ?? "photo"}
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
   const id = uid.replace(/[^a-zA-Z0-9_-]/g, "_");
   return (
     <svg viewBox="0 0 200 130" className={className ?? "photo"} role="img" aria-label={`${kind} photo`}>

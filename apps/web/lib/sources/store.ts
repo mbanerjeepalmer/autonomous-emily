@@ -49,7 +49,7 @@ async function loadFromRedis(): Promise<void> {
 
   const ids = (await redis.smembers(FINDING_IDS_KEY)) as string[];
   if (ids.length > 0) {
-    const values = await redis.mget<Listing>(...ids.map(findingKey));
+    const values = await redis.mget<Listing[]>(...ids.map(findingKey));
     for (let i = 0; i < ids.length; i++) {
       const listing = values[i];
       if (listing && typeof listing === "object") {
@@ -94,6 +94,28 @@ export async function getRun(requestId: string): Promise<RunRecord | null> {
     runsMirror.set(requestId, record);
   }
   return record ?? null;
+}
+
+/** Record that a run was started so the invoke UI can poll before findings arrive. */
+export async function markRunPending(requestId: string): Promise<RunRecord> {
+  const id = requestId.trim();
+  if (!id) throw new Error("requestId is required");
+
+  await ensureStoreHydrated();
+  const existing = runsMirror.get(id);
+  const record: RunRecord = {
+    requestId: id,
+    updatedAt: new Date().toISOString(),
+    findingIds: existing?.findingIds ?? [],
+    status: "pending",
+  };
+  runsMirror.set(id, record);
+
+  const redis = getRedis();
+  if (redis) {
+    await redis.set(runKey(id), record);
+  }
+  return record;
 }
 
 /**

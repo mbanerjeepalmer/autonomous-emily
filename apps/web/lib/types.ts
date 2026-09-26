@@ -66,6 +66,8 @@ export type ListingPhoto = {
   kind: PhotoKind;
   sketch: Sketch;
   embedding: number[];
+  /** Live listing image when the bot submitted a real photo URL. */
+  url?: string;
   /** Raw OCR output for this photo, if any text was found. */
   ocrText?: string;
 };

@@ -136,7 +136,8 @@ select {
   padding: 12px; transition: border-color 0.15s, transform 0.15s;
 }
 .row:hover { border-color: color-mix(in srgb, var(--text) 30%, var(--border)); }
-.row .thumb { width: 132px; border-radius: 6px; display: block; }
+.row .thumb { width: 132px; aspect-ratio: 200 / 130; object-fit: cover; border-radius: 6px; display: block; background: var(--surface-2); }
+img.photo { width: 100%; aspect-ratio: 200 / 130; object-fit: cover; border-radius: 6px; display: block; background: var(--surface-2); }
 .row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .gloss { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .meta { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }

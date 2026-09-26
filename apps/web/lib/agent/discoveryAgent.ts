@@ -1,8 +1,8 @@
 // Live version of step 2 ("Scrape broadly") from apps/web/README.md: a Pi
 // agent (@earendil-works/pi-agent-core) with a Tavily search tool, used to
-// find real marketplace listings for the buyer's brief instead of the
-// hard-coded lib/data/listings.ts set. Its output does not feed the scoring
-// pipeline (lib/pipeline.ts) — that still runs entirely on mock data.
+// find real marketplace listings for the buyer's brief. /api/discover maps
+// its hits through listingFromLooseFinding and upserts them into the store
+// so they appear on /results alongside fixture listings.
 
 import { Agent } from "@earendil-works/pi-agent-core";
 import { contentText, createModels } from "@earendil-works/pi-ai";

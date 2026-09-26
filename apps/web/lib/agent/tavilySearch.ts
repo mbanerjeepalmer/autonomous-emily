@@ -1,37 +1,15 @@
 // Real "Scrape broadly" adapter for the discovery agent (see apps/web/README.md).
-// Wraps Tavily's REST search API as a tool the agent can call.
+// Wraps the shared Tavily adapter as a tool the Pi agent can call.
 
 import { Type } from "@earendil-works/pi-ai";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
+import { searchTavily } from "@/lib/sources/tavily";
+import type { TavilyHit } from "@/lib/sources/types";
 
-export type TavilyResult = {
-  title: string;
-  url: string;
-  content: string;
-  score: number;
-};
+export type TavilyResult = TavilyHit;
 
 export async function tavilySearch(query: string, maxResults = 8): Promise<TavilyResult[]> {
-  const apiKey = process.env.TAVILY_API_KEY;
-  if (!apiKey) throw new Error("TAVILY_API_KEY is not set");
-
-  const res = await fetch("https://api.tavily.com/search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: apiKey,
-      query,
-      max_results: maxResults,
-      search_depth: "basic",
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Tavily search failed: ${res.status} ${await res.text()}`);
-  }
-
-  const data = (await res.json()) as { results?: TavilyResult[] };
-  return data.results ?? [];
+  return searchTavily(query, maxResults);
 }
 
 const tavilySearchParameters = Type.Object({

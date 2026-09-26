@@ -38,7 +38,7 @@ export function OpportunityRow({
   return (
     <Link href={href} className="row">
       <div>
-        <ShoePhoto sketch={l.photos[0].sketch} kind={l.photos[0].kind} uid={`t-${l.photos[0].id}`} className="thumb" />
+        <ShoePhoto sketch={l.photos[0].sketch} kind={l.photos[0].kind} uid={`t-${l.photos[0].id}`} url={l.photos[0].url} className="thumb" />
         <RowControls id={l.id} showSelect={showSelect} />
       </div>
       <div style={{ minWidth: 0 }}>

@@ -1,24 +1,76 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import type { DiscoveryFinding } from "@/lib/agent/discoveryAgent";
+
+type RunStatus = "pending" | "submitted" | "empty";
 
 type InvokeResult = {
   ok?: boolean;
-  status?: number;
+  status?: number | RunStatus;
   requestId?: string;
   error?: string;
+  findings?: DiscoveryFinding[];
+};
+
+type PolledRun = {
+  requestId: string;
+  status: RunStatus;
+  findingCount: number;
 };
 
 export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean }) {
   const [signedIn, setSignedIn] = useState(initiallySignedIn);
   const [password, setPassword] = useState("");
   const [task, setTask] = useState(
-    'Reply in chat with: webhook ok from Emily',
+    "Find Japanese designer footwear listings for sale",
   );
+  const [provider, setProvider] = useState<"grok" | "pi">("grok");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<InvokeResult | null>(null);
+  const [run, setRun] = useState<PolledRun | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (provider !== "grok" || !result?.ok || !result.requestId) return;
+    const requestId = result.requestId;
+    let cancelled = false;
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/emily/runs/${encodeURIComponent(requestId)}`);
+        if (cancelled) return;
+        if (res.status === 404) return;
+        const data = await res.json();
+        if (!res.ok) return;
+        setRun({
+          requestId: data.requestId,
+          status: data.status,
+          findingCount: data.findingCount,
+        });
+        if (data.status === "submitted" || data.status === "empty") return true;
+      } catch {
+        // Keep polling; the bot may not have submitted yet.
+      }
+      return false;
+    };
+
+    const tick = async () => {
+      attempts += 1;
+      const done = await poll();
+      if (!cancelled && !done && attempts < 45) {
+        timer = setTimeout(tick, 2000);
+      }
+    };
+
+    let timer: ReturnType<typeof setTimeout> = setTimeout(tick, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [provider, result]);
 
   async function onLogin(event: FormEvent) {
     event.preventDefault();
@@ -46,11 +98,12 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
     setLoading(true);
     setError(null);
     setResult(null);
+    setRun(null);
     try {
-      const res = await fetch("/api/emily/invoke", {
+      const res = await fetch(provider === "grok" ? "/api/emily/invoke" : "/api/discover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task }),
+        body: JSON.stringify(provider === "grok" ? { task } : { query: task }),
       });
       const data = (await res.json()) as InvokeResult;
       if (!res.ok) {
@@ -99,11 +152,44 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
         <Link href="/desktop" className="muted">Open desktop →</Link>
       </p>
       <div className="hero">
-        <h1>Invoke Grok Bot</h1>
+        <h1>Run a sourcing agent</h1>
         <p className="muted">
-          Sends a webhook to the Bot routine. A 200 means the run started — check the Bot chat for the result.
+          Choose the agent for this task. Grok Bot runs through its webhook and sends
+          findings back through MCP. Pi searches with Tavily and stores its findings
+          for scoring on results.
         </p>
         <form onSubmit={onInvoke} className="search-form">
+          <fieldset disabled={loading} className="field">
+            <legend className="small">Agent</legend>
+            <label style={{ marginRight: 20 }}>
+              <input
+                type="radio"
+                name="provider"
+                checked={provider === "grok"}
+                onChange={() => {
+                  setProvider("grok");
+                  setResult(null);
+                  setRun(null);
+                  setError(null);
+                }}
+              />{" "}
+              Grok Bot
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="provider"
+                checked={provider === "pi"}
+                onChange={() => {
+                  setProvider("pi");
+                  setResult(null);
+                  setRun(null);
+                  setError(null);
+                }}
+              />{" "}
+              Pi
+            </label>
+          </fieldset>
           <div className="field">
             <label className="small" htmlFor="invoke-task">Task</label>
             <textarea
@@ -115,11 +201,36 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
             />
           </div>
           {error && <p className="small" style={{ color: "var(--bad)" }}>{error}</p>}
-          {result?.ok && (
+          {result?.ok && provider === "grok" ? (
             <p className="small muted">
-              Started (webhook {result.status}). requestId: <code className="mono">{result.requestId}</code>
+              Started (webhook {result.status}). requestId:{" "}
+              <code className="mono">{result.requestId}</code>.{" "}
+              {run?.status === "submitted" ? (
+                <>Bot submitted {run.findingCount} finding{run.findingCount === 1 ? "" : "s"}. See <Link href="/results">results</Link>.</>
+              ) : run?.status === "empty" ? (
+                <>Bot finished with no usable listings. See <Link href="/desktop">Bot chat</Link>.</>
+              ) : (
+                <>Waiting for MCP submit… Check <Link href="/results">results</Link> or <Link href="/desktop">Bot chat</Link>.</>
+              )}
             </p>
-          )}
+          ) : null}
+          {result?.ok && provider === "pi" ? (
+            <section aria-live="polite">
+              <h2>Pi findings</h2>
+              {result.requestId ? (
+                <p className="small muted">
+                  Stored as request <code className="mono">{result.requestId}</code>. Open <Link href="/results">results</Link> to score them.
+                </p>
+              ) : null}
+              {result.findings?.length ? result.findings.map((finding) => (
+                <p key={finding.url}>
+                  <a href={finding.url} target="_blank" rel="noopener noreferrer">{finding.title}</a>
+                  {finding.source ? ` · ${finding.source}` : ""}{finding.price ? ` · ${finding.price}` : ""}
+                  {finding.snippet ? <><br /><span className="muted">{finding.snippet}</span></> : null}
+                </p>
+              )) : <p>No listings found for this task.</p>}
+            </section>
+          ) : null}
           <div className="search-row">
             <button type="submit" className="btn primary" disabled={loading || !task.trim()}>
               {loading ? "Sending…" : "Run"}

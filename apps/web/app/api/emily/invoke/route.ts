@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { readAppSession } from "@/lib/auth";
+import { markRunPending } from "@/lib/sources/store";
 
 type InvokeBody = {
   task?: unknown;
@@ -83,6 +84,8 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
+
+  await markRunPending(requestId);
 
   return NextResponse.json({
     ok: true,

@@ -27,7 +27,7 @@ const moneySchema = z.object({
 });
 
 const rawFindingPhotoSchema = z.object({
-  url: z.string().min(1),
+  url: z.string().url(),
   kind: photoKindSchema.optional(),
   ocrText: z.string().optional(),
 });
@@ -35,7 +35,7 @@ const rawFindingPhotoSchema = z.object({
 const rawFindingSchema: z.ZodType<RawFinding> = z.object({
   externalId: z.string().min(1),
   source: sourceIdSchema,
-  url: z.string().min(1),
+  url: z.string().url(),
   title: z.string(),
   titleGloss: z.string().optional(),
   description: z.string(),
@@ -44,7 +44,7 @@ const rawFindingSchema: z.ZodType<RawFinding> = z.object({
   size: z.string().optional(),
   location: z.string(),
   postedAt: z.string(),
-  photos: z.array(rawFindingPhotoSchema),
+  photos: z.array(rawFindingPhotoSchema).min(1),
 });
 
 function jsonToolResult(payload: unknown, isError = false) {
