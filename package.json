@@ -7,10 +7,8 @@
   "scripts": {
     "dev": "npm run dev -w web",
     "dev:web": "npm run dev -w web",
-    "dev:control": "npm run dev -w control",
     "build": "npm run build -w web",
     "build:web": "npm run build -w web",
-    "build:control": "npm run build -w control",
     "test": "npm run test -w web"
   }
 }

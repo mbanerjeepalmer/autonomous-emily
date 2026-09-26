@@ -15,7 +15,14 @@
   --neutral-bg: #ecebe7;
   --radius: 10px;
   color-scheme: light;
+  /* aliases for ops UI (invoke / desktop) */
+  --bg-elevated: var(--surface);
+  --ink: var(--text);
+  --line: var(--border);
+  --danger: var(--bad);
+  --accent-ink: #ffffff;
 }
+
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -34,6 +41,7 @@
     --bad-bg: #3b1d1a;
     --neutral-bg: #2b2a27;
     color-scheme: dark;
+    --accent-ink: #151514;
   }
 }
 

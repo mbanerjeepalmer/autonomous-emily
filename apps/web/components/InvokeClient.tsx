@@ -14,7 +14,7 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
   const [signedIn, setSignedIn] = useState(initiallySignedIn);
   const [password, setPassword] = useState("");
   const [task, setTask] = useState(
-    'Reply in chat with: webhook ok from control UI',
+    'Reply in chat with: webhook ok from Emily',
   );
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<InvokeResult | null>(null);

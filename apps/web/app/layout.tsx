@@ -19,6 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/">Search</Link>
             <Link href="/results">Browse all</Link>
             <Link href="/references">Target universe</Link>
+            <Link href="/invoke">Invoke</Link>
+            <Link href="/desktop">Desktop</Link>
             <Link href="/api/opportunities">API</Link>
           </nav>
           <span className="proto">Prototype · hard-coded data</span>
