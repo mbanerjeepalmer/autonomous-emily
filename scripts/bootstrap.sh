@@ -103,6 +103,7 @@ fi
 log "Installing helper scripts and gateway"
 install -m 0755 "${SYSTEMD_SRC}/grok-bot-launch" /usr/local/bin/grok-bot-launch
 install -m 0755 "${SYSTEMD_SRC}/grok-novnc-start" /usr/local/bin/grok-novnc-start
+install -m 0755 "${SYSTEMD_SRC}/grok-vnc-run" /usr/local/bin/grok-vnc-run
 install -d /usr/local/lib/grok-desktop
 install -m 0755 "${GATEWAY_SRC}/auth_validate.py" /usr/local/lib/grok-desktop/auth_validate.py
 
@@ -115,6 +116,12 @@ if [[ ! -x /usr/bin/grok-bot ]]; then
     fi
   done
 fi
+
+# Desktop dirs must be owned by the session user (not root)
+install -d -o "${DESKTOP_USER}" -g "${DESKTOP_USER}" \
+  "${HOME_DIR}/.config" "${HOME_DIR}/.cache" "${HOME_DIR}/.local/share" \
+  "${HOME_DIR}/.config/Grok Bot" "${HOME_DIR}/.grokbot"
+chown -R "${DESKTOP_USER}:${DESKTOP_USER}" "${HOME_DIR}/.config" "${HOME_DIR}/.cache" "${HOME_DIR}/.local" || true
 
 log "Writing /etc/grok-desktop.env"
 cat >/etc/grok-desktop.env <<EOF

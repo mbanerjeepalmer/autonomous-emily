@@ -4,18 +4,14 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=forking
+Type=simple
 User=__DESKTOP_USER__
 Group=__DESKTOP_USER__
-PAMName=login
 Environment=HOME=/home/__DESKTOP_USER__
 Environment=USER=__DESKTOP_USER__
 WorkingDirectory=/home/__DESKTOP_USER__
-
-ExecStartPre=-/usr/bin/vncserver -kill :1
-ExecStart=/usr/bin/vncserver :1 -localhost yes -geometry 1920x1080 -depth 24 -SecurityTypes None
+ExecStart=/usr/local/bin/grok-vnc-run
 ExecStop=/usr/bin/vncserver -kill :1
-
 Restart=on-failure
 RestartSec=5
 KillMode=control-group

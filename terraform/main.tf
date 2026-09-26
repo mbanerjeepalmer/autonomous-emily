@@ -32,8 +32,8 @@ variable "server_name" {
 
 variable "server_type" {
   type        = string
-  default     = "cx22"
-  description = "Hetzner server type (cx22 ~2 vCPU / 4 GB; use cx32 if RAM is tight)"
+  default     = "cx23"
+  description = "Hetzner server type (cx23 ~2 vCPU / 4 GB; use cx33 if RAM is tight)"
 }
 
 variable "location" {

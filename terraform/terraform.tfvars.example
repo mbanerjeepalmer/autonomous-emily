@@ -12,7 +12,7 @@
 ssh_public_key = "ssh-ed25519 AAAA... your-key-comment"
 
 server_name  = "grok-bot"
-server_type  = "cx22"
+server_type  = "cx23"
 location     = "fsn1"
 desktop_user = "grok"
 

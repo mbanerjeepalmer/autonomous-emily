@@ -2,10 +2,19 @@
 # Launch Grok Bot under the VNC display with a usable Ozone/X11 backend.
 set -euo pipefail
 
+export HOME="${HOME:-/home/grok}"
+export USER="${USER:-grok}"
 export DISPLAY="${DISPLAY:-:1}"
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export ELECTRON_OZONE_PLATFORM_HINT="${ELECTRON_OZONE_PLATFORM_HINT:-x11}"
 
-# Prefer the packaged binary from the .deb / apt package
+mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME" \
+  "$HOME/.config/Grok Bot" "$HOME/.grokbot"
+
+USER_DATA_DIR="${SAND_USER_DATA_DIR:-$HOME/.config/Grok Bot}"
+
 for candidate in \
   /usr/bin/grok-bot \
   "/opt/Grok Bot/grok-bot" \
@@ -13,15 +22,14 @@ for candidate in \
   /usr/local/bin/grok-bot
 do
   if [[ -x "$candidate" ]]; then
-    exec "$candidate" "$@"
+    exec "$candidate" --user-data-dir="$USER_DATA_DIR" "$@"
   fi
 done
 
-# AppImage fallback if present
 shopt -s nullglob
 for appimage in /opt/grok-bot/*.AppImage "$HOME"/Grok*.AppImage; do
   if [[ -x "$appimage" ]]; then
-    exec "$appimage" "$@"
+    exec "$appimage" --user-data-dir="$USER_DATA_DIR" "$@"
   fi
 done
 

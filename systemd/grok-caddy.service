@@ -6,14 +6,19 @@ Requires=grok-desktop-auth.service grok-novnc.service
 
 [Service]
 Type=notify
+User=caddy
+Group=caddy
+Environment=HOME=/var/lib/caddy
 EnvironmentFile=-/etc/grok-desktop.env
-ExecStart=/usr/bin/caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+ExecStartPre=/bin/mkdir -p /var/lib/caddy
+ExecStart=/usr/bin/caddy run --environ --config /etc/caddy/Caddyfile --adapter caddyfile
 ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 Restart=on-failure
 RestartSec=5
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
+LimitNOFILE=1048576
 
 [Install]
 WantedBy=multi-user.target

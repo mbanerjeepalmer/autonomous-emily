@@ -9,8 +9,6 @@ Type=simple
 User=__DESKTOP_USER__
 Group=__DESKTOP_USER__
 Environment=HOME=/home/__DESKTOP_USER__
-
-# Prefer Tailscale IP when present; fall back to 127.0.0.1
 ExecStart=/usr/local/bin/grok-novnc-start
 Restart=on-failure
 RestartSec=5
