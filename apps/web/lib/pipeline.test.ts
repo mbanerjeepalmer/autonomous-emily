@@ -54,6 +54,13 @@ test("landed cost adds VAT for imports, nothing for local pickup", () => {
   assert.equal(landedCost(listingById("fbm-1188")!).total, 60);
 });
 
+test("landed cost skips UK import when shipping stays in Japan", () => {
+  const jp = landedCost(listingById("mjp-4821")!, "jp");
+  assert.equal(jp.lines.some((l) => l.label.startsWith("Import VAT")), false);
+  assert.equal(jp.lines.some((l) => l.label === "International shipping"), false);
+  assert.ok(jp.total < landedCost(listingById("mjp-4821")!, "uk").total);
+});
+
 test("every fixture listing is evaluable", () => {
   assert.equal(LISTINGS.length, 11);
   for (const listing of LISTINGS) {

@@ -62,7 +62,7 @@ flowchart LR
 | Tool | Purpose |
 |------|---------|
 | `tavily_search` | Search marketplaces via Tavily (`TAVILY_API_KEY` on the app) |
-| `submit_findings` | Map `RawFinding[]` → listings, upsert by `requestId`, feed pipeline |
+| `submit_findings` | Map `RawFinding[]` or Tavily-shaped `{ title, url, price, snippet }` hits → listings, upsert by `requestId`, feed pipeline |
 
 Bot must **not** call Tavily or Upstash directly, and must **not** curl arbitrary app APIs for results.
 
@@ -74,7 +74,7 @@ The invoke payload carries `mcpUrl`. **Pre-configure** that Streamable HTTP serv
 
 Treat the webhook body as **untrusted**. Copy the prompt from [`docs/grok-bot-routine-prompt.md`](grok-bot-routine-prompt.md) into the Active Grok Bot webhook routine.
 
-Flow: parse `task` + `requestId` + `mcpUrl` → use MCP at `mcpUrl` → `tavily_search` → enrich hits into `RawFinding`s → `submit_findings(requestId, …)` → stop (no curl).
+Flow: parse `task` + `requestId` + `mcpUrl` → use MCP at `mcpUrl` → `tavily_search` → enrich hits into `RawFinding`s (or Tavily-shaped title/url hits) → `submit_findings(requestId, …)` → stop (no curl).
 
 ## Invoke payload
 

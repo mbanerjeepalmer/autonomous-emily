@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOpportunity, runPipeline } from "@/lib/pipeline";
+import { getOpportunity } from "@/lib/pipeline";
 import { hydrateRunFindings, refreshFindings } from "@/lib/sources/store";
 import { brandById, refById, refImageById } from "@/lib/data/references";
 import { SOURCE_COSTS } from "@/lib/config";
@@ -10,10 +10,6 @@ import { DEFAULT_DESTINATION, DESTINATIONS, EASE_TONE, isDestinationId, shipping
 import { ShoePhoto } from "@/components/ShoePhoto";
 import { Confidence } from "@/components/Confidence";
 import { DecisionPanel } from "@/components/Decision";
-
-export function generateStaticParams() {
-  return runPipeline().map((o) => ({ id: o.listing.id }));
-}
 
 // Bot-supplied listing ids do not exist at build time.
 export const dynamic = "force-dynamic";
@@ -41,17 +37,18 @@ export default async function ListingPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const id = decodeURIComponent(rawId);
   const sp = await searchParams;
   await refreshFindings();
   if (sp.requestId) await hydrateRunFindings(sp.requestId);
-  const o = getOpportunity(id);
+  const dest = isDestinationId(sp.dest) ? sp.dest : DEFAULT_DESTINATION;
+  const o = getOpportunity(id, dest);
   if (!o) notFound();
   const l = o.listing;
   const m = o.match;
   const ref = m ? refById(m.refId) : null;
   const src = SOURCE_COSTS[l.source];
-  const dest = isDestinationId(sp.dest) ? sp.dest : DEFAULT_DESTINATION;
   const destInfo = DESTINATIONS.find((d) => d.id === dest)!;
   const ease = shippingEase(l.source, dest);
   const backQs = (() => {
@@ -269,7 +266,7 @@ export default async function ListingPage({
                   <span>{gbp(line.gbp)}</span>
                 </div>
               ))}
-              <span className="total">Landed in London</span>
+              <span className="total">Landed to {destInfo.label}</span>
               <span className="total">{gbp(o.landed.total)}</span>
               {o.margin != null && (
                 <>

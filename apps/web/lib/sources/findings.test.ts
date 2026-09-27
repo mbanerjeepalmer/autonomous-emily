@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { listingFromLooseFinding, toListing } from "./findings.ts";
+import { listingFromLooseFinding, listingId, mapSubmittedFinding, toListing } from "./findings.ts";
 
 const finding = {
   externalId: "ebay-123",
@@ -33,6 +33,22 @@ test("rejects an unusable finding before it reaches the results UI", () => {
     /http\(s\) URL/,
   );
   assert.throws(() => toListing({ ...finding, photos: [] }), /at least one photo/);
+});
+
+test("listing ids cannot contain path characters", () => {
+  assert.equal(listingId("ebay/123?ref=1"), "bot:ebay-123-ref=1");
+});
+
+test("mapSubmittedFinding accepts a Tavily-shaped hit", () => {
+  const listing = mapSubmittedFinding({
+    title: "visvim FBT",
+    url: "https://www.ebay.com/itm/888",
+    price: "¥20000",
+    snippet: "used, size 9",
+  });
+  assert.equal(listing.id, "bot:www-ebay-com-itm-888");
+  assert.equal(listing.price.currency, "JPY");
+  assert.equal(listing.photos[0]?.url, undefined);
 });
 
 test("maps a search hit without inventing a photo URL", () => {

@@ -12,7 +12,11 @@ export function directionTermsFor(ids: string[], opportunities: Opportunity[]): 
   const terms = new Set<string>();
   for (const id of ids) {
     const o = byId.get(id);
-    if (!o?.match) continue;
+    if (!o) continue;
+    if (!o.match) {
+      for (const word of parseInstruction(o.listing.title)) terms.add(word);
+      continue;
+    }
     const brand = brandById(o.match.brandId);
     const ref = refById(o.match.refId);
     terms.add(brand.name);

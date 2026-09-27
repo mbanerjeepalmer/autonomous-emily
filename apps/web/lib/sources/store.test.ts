@@ -64,3 +64,29 @@ test("writes fail closed on Vercel when Redis is not configured", () => {
   );
   assert.equal(missingRedisWriteError({}), null);
 });
+
+test("default Redis check reads process.env by name, not the env object", () => {
+  const keys = [
+    "VERCEL",
+    "EMILY_REQUIRE_REDIS",
+    "UPSTASH_REDIS_REST_URL",
+    "UPSTASH_REDIS_REST_TOKEN",
+  ] as const;
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  try {
+    process.env.VERCEL = "1";
+    delete process.env.EMILY_REQUIRE_REDIS;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    assert.match(missingRedisWriteError() ?? "", /UPSTASH_REDIS_REST_URL/);
+
+    process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+    assert.equal(missingRedisWriteError(), null);
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
+});

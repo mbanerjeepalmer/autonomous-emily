@@ -46,6 +46,7 @@ export default function BagPage() {
     const terms = directionTermsFor(ids, opportunities);
     const params = new URLSearchParams();
     if (terms.length) params.set("details", terms.join(", "));
+    else if (items[0]) params.set("q", items[0].listing.title);
     router.push(params.toString() ? `/results?${params.toString()}` : "/results");
   }
 
@@ -75,7 +76,7 @@ export default function BagPage() {
             <OpportunityRow
               key={o.listing.id}
               o={o}
-              href={`/listing/${o.listing.id}`}
+              href={`/listing/${encodeURIComponent(o.listing.id)}`}
               dest={DEFAULT_DESTINATION}
               showSelect={false}
             />

@@ -4,7 +4,7 @@
 
 1. **Vercel** hosts this Next.js app (`/`, `/desktop`, `/api/*`).
 2. After operator login (`APP_GATE_PASSWORD`), `POST /api/desktop/session` mints a 1-hour HS256 JWT with `aud=desktop`.
-3. The `/desktop` page iframes `https://$DESKTOP_PUBLIC_HOST/vnc.html?token=…&path=websockify?token=…`.
+3. The `/desktop` page iframes `https://$DESKTOP_PUBLIC_HOST/enter?token=…` (cookie + redirect to `vnc.html`).
 4. **Caddy** on Hetzner terminates TLS, runs `forward_auth` against `auth_validate.py`, then proxies to local noVNC.
 5. **Grok Bot** runs in XFCE; bots still execute on Cursor’s cloud computer.
 
@@ -36,7 +36,7 @@ Use the **same** `DESKTOP_JWT_SECRET` in `.env` (bootstrap) and in the Vercel pr
 ```bash
 set -a && source .env && set +a
 chmod +x infra/hetzner/scripts/*.sh infra/hetzner/systemd/grok-bot-launch infra/hetzner/systemd/grok-novnc-start infra/hetzner/systemd/grok-vnc-run infra/hetzner/systemd/xstartup infra/hetzner/gateway/auth_validate.py
-./infra/hetzner/infra/hetzner/scripts/provision.sh
+./infra/hetzner/scripts/provision.sh
 ```
 
 Default server type is **cx23** (Hetzner’s current 2 vCPU / 4 GB SKU; `cx22` was removed from the API). Use `server_type = "cx33"` in tfvars if RAM is tight.

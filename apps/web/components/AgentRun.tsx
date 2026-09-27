@@ -132,6 +132,7 @@ export function AgentRun({
   const [run, setRun] = useState<RunSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -174,6 +175,8 @@ export function AgentRun({
         }
         if (!cancelled && attempts < MAX_POLL_ATTEMPTS) {
           timer = setTimeout(tick, POLL_MS);
+        } else if (!cancelled) {
+          setTimedOut(true);
         }
       };
       timer = setTimeout(tick, POLL_MS);
@@ -181,6 +184,7 @@ export function AgentRun({
 
     const start = async () => {
       setError(null);
+      setTimedOut(false);
       setStarting(true);
       try {
         const snap = await startOrResume(briefRef.current, urlRequestId);
@@ -262,6 +266,13 @@ export function AgentRun({
       {error && signedIn && (
         <p className="small" style={{ color: "var(--bad)", margin: "12px 0 0" }}>
           {error}
+        </p>
+      )}
+
+      {timedOut && signedIn && run?.status === "pending" && (
+        <p className="small muted" style={{ margin: "12px 0 0" }}>
+          Still waiting after ~90 seconds. The bot may still submit — reload this page or check{" "}
+          <Link href="/desktop">Bot chat</Link>.
         </p>
       )}
 

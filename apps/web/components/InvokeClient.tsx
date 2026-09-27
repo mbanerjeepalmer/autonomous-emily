@@ -143,6 +143,10 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
     );
   }
 
+  const resultsHref = result?.requestId
+    ? `/results?requestId=${encodeURIComponent(result.requestId)}&q=${encodeURIComponent(task.slice(0, 120))}`
+    : "/results";
+
   return (
     <main className="page page-narrow">
       <p className="small" style={{ margin: "0 0 12px" }}>
@@ -172,11 +176,11 @@ export function InvokeClient({ initiallySignedIn }: { initiallySignedIn: boolean
               Started (webhook {result.status}). requestId:{" "}
               <code className="mono">{result.requestId}</code>.{" "}
               {run?.status === "submitted" ? (
-                <>Bot submitted {run.findingCount} finding{run.findingCount === 1 ? "" : "s"}. See <Link href="/results">results</Link>.</>
+                <>Bot submitted {run.findingCount} finding{run.findingCount === 1 ? "" : "s"}. See <Link href={resultsHref}>this run</Link>.</>
               ) : run?.status === "empty" ? (
                 <>Bot finished with no usable listings. See <Link href="/desktop">Bot chat</Link>.</>
               ) : (
-                <>Waiting for MCP submit… Check <Link href="/results">results</Link> or <Link href="/desktop">Bot chat</Link>.</>
+                <>Waiting for MCP submit… Check <Link href={resultsHref}>this run</Link> or <Link href="/desktop">Bot chat</Link>.</>
               )}
             </p>
           ) : null}

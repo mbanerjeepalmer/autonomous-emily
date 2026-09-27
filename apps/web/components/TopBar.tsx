@@ -15,12 +15,13 @@ export function TopBar() {
       </Link>
       <nav className="nav">
         <Link href="/">Search</Link>
-        <Link href="/results">Browse all</Link>
-        <Link href="/references">Target universe</Link>
-        <Link href="/invoke">Invoke</Link>
-        <Link href="/desktop">Desktop</Link>
-        <Link href="/api/opportunities">API</Link>
+        <Link href="/results">All findings</Link>
+        <Link href="/references">Targets</Link>
         <BagLink />
+        <span className="nav-ops">
+          <Link href="/invoke">Invoke</Link>
+          <Link href="/desktop">Desktop</Link>
+        </span>
       </nav>
         <span className="proto">Prototype · live agents</span>
     </header>

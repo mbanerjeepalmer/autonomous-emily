@@ -45,7 +45,9 @@ export function RefineBar({ opportunities }: { opportunities: Opportunity[] }) {
       <div className="refine-bar-inner">
         <div className="refine-row">
           <span className="small muted">
-            {count > 0 ? `${count} selected as a direction` : "Select a few items above to point me somewhere"}
+            {count > 0
+              ? `${count} selected — re-rank this run (does not start a new hunt)`
+              : "Select a few items above to re-rank this run — this does not start a new Grok Bot hunt"}
           </span>
           {count > 0 && (
             <>

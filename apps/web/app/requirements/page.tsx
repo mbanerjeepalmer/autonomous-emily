@@ -1,26 +1,12 @@
 import Link from "next/link";
 import { RequirementsForm } from "@/components/RequirementsForm";
+import { StepHint } from "@/components/StepHint";
+import { briefQueryString, type BriefParams } from "@/lib/briefParams";
 
-type Params = {
-  q?: string;
-  brand?: string;
-  material?: string;
-  color?: string;
-  details?: string;
-  notes?: string;
-  budget?: string;
-  dest?: string;
-  size?: string;
-};
-
-export default async function Requirements({ searchParams }: { searchParams: Promise<Params> }) {
-  const { q, brand, material, color, details, notes, budget, dest, size } = await searchParams;
-  const backQs = (() => {
-    const sp = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q, brand, material, color, details, notes })) if (v) sp.set(k, v);
-    const s = sp.toString();
-    return s ? `?${s}` : "";
-  })();
+export default async function Requirements({ searchParams }: { searchParams: Promise<BriefParams> }) {
+  const params = await searchParams;
+  const { q, brand, material, color, details, notes, budget, dest, size, requestId } = params;
+  const backQs = briefQueryString(params, { tab: undefined });
 
   return (
     <main className="page page-narrow">
@@ -28,13 +14,13 @@ export default async function Requirements({ searchParams }: { searchParams: Pro
         <Link href={`/insider${backQs}`} className="muted">← Back to insider details</Link>
       </p>
       <div className="hero">
+        <StepHint step={3} />
         <h1>What can we actually buy for you?</h1>
         <p className="muted">
-          The last few things the agent needs before it goes shopping on your behalf: how much you&apos;ll spend,
-          where it has to ship, and what sizes are actually wearable by you.
+          Budget, destination, and size change landed cost and ranking. Grok Bot is the sourcing agent for every brief.
         </p>
         <RequirementsForm
-          hidden={{ q, brand, material, color, details, notes }}
+          hidden={{ q, brand, material, color, details, notes, requestId }}
           initial={{ budget, dest, size }}
         />
       </div>

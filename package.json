@@ -9,6 +9,7 @@
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w web",
     "build:web": "npm run build -w web",
-    "test": "npm run test -w web"
+    "test": "npm run test -w web",
+    "test:e2e": "npm run test:e2e -w web"
   }
 }

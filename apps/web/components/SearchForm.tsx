@@ -3,14 +3,12 @@
 import { useRef, useState } from "react";
 
 export function SearchForm() {
-  const [q, setQ] = useState("");
   const [image, setImage] = useState<{ name: string; url: string } | null>(null);
+  const [typed, setTyped] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-  const canSubmit = q.trim().length > 0 || image !== null;
 
   return (
     <form action="/insider" method="GET" className="landing-form">
-      <input type="hidden" name="q" value={q} />
       {image && <input type="hidden" name="image" value={image.name} />}
 
       {image && (
@@ -41,7 +39,7 @@ export function SearchForm() {
           ref={fileRef}
           type="file"
           accept="image/*"
-          hidden
+          className="landing-file-input"
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) setImage({ name: f.name, url: URL.createObjectURL(f) });
@@ -49,10 +47,11 @@ export function SearchForm() {
         />
 
         <textarea
+          name="q"
           rows={1}
-          placeholder="Describe it, or attach a photo…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          placeholder="Brand, model, anything you know…"
+          defaultValue=""
+          onInput={(e) => setTyped(e.currentTarget.value)}
           autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -62,7 +61,7 @@ export function SearchForm() {
           }}
         />
 
-        <button type="submit" className="landing-icon-btn send" aria-label="Next" disabled={!canSubmit}>
+        <button type="submit" className="landing-icon-btn send" aria-label="Next">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
             <line x1="4" y1="12" x2="20" y2="12" />
             <polyline points="14 6 20 12 14 18" />
@@ -70,6 +69,11 @@ export function SearchForm() {
         </button>
       </div>
 
+      {image && !typed.trim() && (
+        <p className="small muted" style={{ margin: 0 }}>
+          Emily will search from the file name — she cannot see the photo pixels yet.
+        </p>
+      )}
     </form>
   );
 }

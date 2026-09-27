@@ -22,6 +22,10 @@ export const isDestinationId = (v: string | undefined): v is DestinationId =>
 
 const ORIGIN_BY_FLAG: Record<string, DestinationId> = { JP: "jp", US: "us", UK: "uk" };
 
+export function sourceOrigin(source: SourceId): DestinationId {
+  return ORIGIN_BY_FLAG[SOURCE_COSTS[source].flag] ?? "other";
+}
+
 export type ShippingEase = {
   level: "domestic" | "easy" | "moderate" | "hard";
   label: string;

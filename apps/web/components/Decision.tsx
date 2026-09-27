@@ -64,15 +64,21 @@ export function DecisionPanel({ id, url }: { id: string; url: string }) {
       )}
       <textarea rows={2} placeholder="Notes (e.g. asked for insole photo)" value={note} onChange={(e) => setNote(e.target.value)} />
       <div className="btns" style={{ marginTop: 10 }}>
-        <a className="btn primary" href={url} target="_blank" rel="noreferrer" onClick={() => decide("bought")}>
-          Open listing &amp; buy
+        <a className="btn" href={url} target="_blank" rel="noreferrer">
+          Open listing
         </a>
-        <button className="btn" onClick={() => decide("asked")}>Ask seller</button>
-        <button className="btn danger" onClick={() => decide("dismissed")}>Dismiss</button>
+        <button type="button" className="btn primary" onClick={() => decide("bought")}>Mark bought</button>
+        <a className="btn" href={url} target="_blank" rel="noreferrer" onClick={() => decide("asked")}>
+          Ask seller
+        </a>
+        <button type="button" className="btn danger" onClick={() => decide("dismissed")}>Dismiss</button>
         {d && (
-          <button className="btn" onClick={() => set(null)}>Undo</button>
+          <button type="button" className="btn" onClick={() => set(null)}>Undo</button>
         )}
       </div>
+      <p className="small muted" style={{ margin: "10px 0 0" }}>
+        Ask seller opens the listing so you can message there. The badge is only stored in this browser.
+      </p>
     </div>
   );
 }

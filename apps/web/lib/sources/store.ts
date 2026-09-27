@@ -31,9 +31,28 @@ export function setPipelineCacheInvalidator(invalidator: () => void): void {
   invalidatePipelineCache = invalidator;
 }
 
-export function missingRedisWriteError(
-  env: { [key: string]: string | undefined } = process.env,
-): string | null {
+type RedisWriteEnv = {
+  VERCEL?: string;
+  EMILY_REQUIRE_REDIS?: string;
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
+};
+
+/**
+ * Next/Turbopack only reliably injects server secrets when they are read as
+ * `process.env.NAME`. Passing `process.env` around and indexing it drops
+ * Vercel-set Upstash vars while still seeing `VERCEL=1`.
+ */
+function readRedisWriteEnv(): RedisWriteEnv {
+  return {
+    VERCEL: process.env.VERCEL,
+    EMILY_REQUIRE_REDIS: process.env.EMILY_REQUIRE_REDIS,
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+  };
+}
+
+export function missingRedisWriteError(env: RedisWriteEnv = readRedisWriteEnv()): string | null {
   const required = Boolean(env.VERCEL || env.EMILY_REQUIRE_REDIS === "1");
   if (!required) return null;
   if (!env.UPSTASH_REDIS_REST_URL?.trim() || !env.UPSTASH_REDIS_REST_TOKEN?.trim()) {
@@ -43,8 +62,7 @@ export function missingRedisWriteError(
 }
 
 function getRedis(): Redis | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token } = readRedisWriteEnv();
   if (!url || !token) {
     return null;
   }

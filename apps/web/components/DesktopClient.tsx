@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useState } from "react";
+import Link from "next/link";
 
 type SessionPayload = {
   url: string;
@@ -60,6 +61,9 @@ export function DesktopClient({ initiallySignedIn }: { initiallySignedIn: boolea
   if (!signedIn) {
     return (
       <main className="page page-narrow">
+        <p className="small" style={{ margin: "0 0 12px" }}>
+          <Link href="/" className="muted">← Product search</Link>
+        </p>
         <div className="hero">
           <h1>Operator sign-in</h1>
           <p className="muted">
@@ -93,6 +97,10 @@ export function DesktopClient({ initiallySignedIn }: { initiallySignedIn: boolea
       <header className="topbar">
         <span className="brand">Grok Bot<span>·</span>Desktop</span>
         <span className="small muted">via Hetzner noVNC</span>
+        <nav className="nav" style={{ marginLeft: 8 }}>
+          <Link href="/results">Results</Link>
+          <Link href="/">Search</Link>
+        </nav>
         <button type="button" className="btn" style={{ marginLeft: "auto" }} onClick={openDesktop} disabled={loading}>
           {loading ? "Refreshing…" : session ? "Refresh session" : "Connect"}
         </button>

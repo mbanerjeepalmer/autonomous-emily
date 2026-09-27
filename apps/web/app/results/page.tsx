@@ -5,9 +5,11 @@ import { RULES } from "@/lib/config";
 import { gbp, pct } from "@/lib/format";
 import { DESTINATIONS, DEFAULT_DESTINATION, isDestinationId } from "@/lib/destinations";
 import { relevance, hasCriteria, type SearchCriteria } from "@/lib/relevance";
+import { briefQueryString, type BriefParams } from "@/lib/briefParams";
 import { OpportunityRow } from "@/components/OpportunityRow";
 import { RefineBar } from "@/components/RefineBar";
 import { AgentRun } from "@/components/AgentRun";
+import { StepHint } from "@/components/StepHint";
 import { readAppSession } from "@/lib/auth";
 import type { Opportunity } from "@/lib/types";
 
@@ -39,35 +41,34 @@ function withoutTerm(details: string | undefined, term: string): string | undefi
   return remaining.length ? remaining.join(", ") : undefined;
 }
 
-type Params = {
-  tab?: string;
-  q?: string;
-  dest?: string;
-  brand?: string;
-  material?: string;
-  color?: string;
-  details?: string;
-  notes?: string;
-  budget?: string;
-  size?: string;
-  requestId?: string;
-};
+function emptyCopy(opts: {
+  searching: boolean;
+  signedIn: boolean;
+  scoped: boolean;
+  runStatus?: string | null;
+}): string {
+  if (opts.runStatus === "empty") {
+    return "Grok Bot finished with no usable listings for this brief.";
+  }
+  if (opts.scoped && opts.runStatus === "pending") {
+    return "No listings for this run yet — Emily is still searching.";
+  }
+  if (opts.searching && !opts.signedIn) {
+    return "Sign in above to send this brief to Emily. The list stays empty until Grok Bot submits findings.";
+  }
+  if (opts.searching) {
+    return "No live listings yet for this brief — Emily is searching, or nothing usable came back.";
+  }
+  return "No live listings yet. Start a search and Emily will send Grok Bot out.";
+}
 
 // Findings are submitted at runtime and must not become a build-time snapshot.
 export const dynamic = "force-dynamic";
 
-function qs(params: Params, overrides: Partial<Params> = {}) {
-  const merged = { ...params, ...overrides };
-  const sp = new URLSearchParams();
-  for (const [k, v] of Object.entries(merged)) if (v) sp.set(k, v);
-  const s = sp.toString();
-  return s ? `?${s}` : "";
-}
-
-export default async function Results({ searchParams }: { searchParams: Promise<Params> }) {
+export default async function Results({ searchParams }: { searchParams: Promise<BriefParams> }) {
   const params = await searchParams;
   await refreshFindings();
-  if (params.requestId) await hydrateRunFindings(params.requestId);
+  const run = params.requestId ? await hydrateRunFindings(params.requestId) : null;
   const signedIn = await readAppSession();
   const { tab = "all", q, brand, material, color, details, notes, size } = params;
   const dest = isDestinationId(params.dest) ? params.dest : DEFAULT_DESTINATION;
@@ -76,9 +77,12 @@ export default async function Results({ searchParams }: { searchParams: Promise<
 
   const criteria: SearchCriteria = { q, brand, material, color, details, size };
   const searching = hasCriteria(criteria);
+  const showAgent = searching || Boolean(params.requestId);
   const withinBudget = (o: Opportunity) => budget == null || o.landed.total <= budget;
 
-  const all = runPipeline()
+  const scopedIds = params.requestId ? new Set(run?.findingIds ?? []) : null;
+  const all = runPipeline(dest)
+    .filter((o) => !scopedIds || scopedIds.has(o.listing.id))
     .map((o) => ({ o, rel: relevance(o, criteria) }))
     .sort((a, b) => {
       if (searching && b.rel.score !== a.rel.score) return b.rel.score - a.rel.score;
@@ -93,29 +97,37 @@ export default async function Results({ searchParams }: { searchParams: Promise<
   }));
   const flagged = ranked.filter((o) => o.status === "flagged");
   const count = (s: string) => (s === "all" ? ranked.length : ranked.filter((o) => o.status === s).length);
+  const qs = (overrides: Partial<BriefParams> = {}) => briefQueryString(params, overrides);
 
   return (
     <main className="page page-refine">
       <p className="small" style={{ margin: "0 0 12px" }}>
         <Link href="/" className="muted">← New search</Link>
         {" · "}
-        <Link href={`/insider${qs(params)}`} className="muted">Edit insider details</Link>
+        <Link href={`/insider${qs({ tab: undefined })}`} className="muted">Edit insider details</Link>
         {" · "}
-        <Link href={`/requirements${qs(params)}`} className="muted">Edit requirements</Link>
+        <Link href={`/requirements${qs({ tab: undefined })}`} className="muted">Edit requirements</Link>
       </p>
 
       <div className="page-head">
         <div>
+          <StepHint step={4} />
           <h1>{q ? <>Opportunities for &ldquo;{q}&rdquo;</> : "Opportunities"}</h1>
           <p className="muted" style={{ margin: "4px 0 0" }}>
             Shipping to {destInfo.flag} {destInfo.label}{budget != null ? <>, budget {gbp(budget)}</> : null}{size ? <>, size {size}</> : null}.{" "}
             Flag rule: confidence ≥ {pct(RULES.flagConfidence)}, margin ≥ {pct(RULES.minMargin)}, expected profit ≥ {gbp(RULES.minExpectedProfit)}, ≥ {RULES.minComps} comps.
           </p>
-          {searching && (
+          {params.requestId ? (
+            <p className="muted small" style={{ margin: "6px 0 0" }}>
+              Showing listings from this run only.
+              {" · "}
+              <Link href={`/results${qs({ requestId: undefined, tab: undefined })}`} className="muted">See all findings</Link>
+            </p>
+          ) : searching ? (
             <p className="muted small" style={{ margin: "6px 0 0" }}>
               Ranked against your insider details first — listings that don&apos;t match are still shown further down.
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -127,10 +139,10 @@ export default async function Results({ searchParams }: { searchParams: Promise<
         <div className="stat"><div className="label">Flagged upside</div><div className="value num">{gbp(flagged.reduce((s, o) => s + (o.expectedProfit ?? 0), 0))}</div></div>
       </section>
 
-      {searching && (
+      {showAgent && (
         <AgentRun
           initiallySignedIn={signedIn}
-          queryString={qs(params).replace(/^\?/, "")}
+          queryString={qs().replace(/^\?/, "")}
           requestId={params.requestId}
           brief={{
             query: q || [brand, material, color, details].filter(Boolean).join(" "),
@@ -143,11 +155,11 @@ export default async function Results({ searchParams }: { searchParams: Promise<
         <div className="direction-chips">
           <span className="small muted">Refining toward:</span>
           {splitDetailTerms(details).map((term) => (
-            <Link key={term} href={`/results${qs(params, { details: withoutTerm(details, term) })}`} className="chip pick">
+            <Link key={term} href={`/results${qs({ details: withoutTerm(details, term) })}`} className="chip pick">
               {term} ✕
             </Link>
           ))}
-          <Link href={`/results${qs(params, { details: undefined })}`} className="small muted" style={{ marginLeft: 4 }}>
+          <Link href={`/results${qs({ details: undefined })}`} className="small muted" style={{ marginLeft: 4 }}>
             Clear direction
           </Link>
         </div>
@@ -155,7 +167,7 @@ export default async function Results({ searchParams }: { searchParams: Promise<
 
       <nav className="tabs">
         {TABS.map((t) => (
-          <Link key={t.id} href={`/results${qs(params, { tab: t.id === "all" ? undefined : t.id })}`} className={`tab ${tab === t.id ? "active" : ""}`}>
+          <Link key={t.id} href={`/results${qs({ tab: t.id === "all" ? undefined : t.id })}`} className={`tab ${tab === t.id ? "active" : ""}`}>
             {t.label} · {count(t.id)}
           </Link>
         ))}
@@ -166,7 +178,7 @@ export default async function Results({ searchParams }: { searchParams: Promise<
           <OpportunityRow
             key={o.listing.id}
             o={o}
-            href={`/listing/${o.listing.id}${qs(params)}`}
+            href={`/listing/${encodeURIComponent(o.listing.id)}${qs()}`}
             dest={dest}
             rel={rel}
             searching={searching}
@@ -175,9 +187,12 @@ export default async function Results({ searchParams }: { searchParams: Promise<
         ))}
         {!shown.length && (
           <p className="muted">
-            {searching
-              ? "No live listings yet for this brief — Emily is searching, or nothing usable came back."
-              : "No live listings yet. Start a search and Emily will send Grok Bot out."}
+            {emptyCopy({
+              searching,
+              signedIn,
+              scoped: Boolean(params.requestId),
+              runStatus: run?.status,
+            })}
           </p>
         )}
       </div>

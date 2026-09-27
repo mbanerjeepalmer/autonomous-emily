@@ -41,6 +41,7 @@ export function InsiderForm({
   keywordChips,
   colorChips,
   initial = {},
+  carry = {},
 }: {
   q: string;
   variantChips: string[];
@@ -49,10 +50,12 @@ export function InsiderForm({
   keywordChips: string[];
   colorChips: string[];
   initial?: { brand?: string; material?: string; color?: string; details?: string; notes?: string };
+  carry?: { dest?: string; budget?: string; size?: string; requestId?: string };
 }) {
   return (
     <form action="/requirements" method="GET" className="search-form">
       <input type="hidden" name="q" value={q} />
+      {Object.entries(carry).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
 
       <ChipField
         name="brand"

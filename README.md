@@ -11,6 +11,8 @@
 ```bash
 npm install
 npm run dev            # http://localhost:3000
+npm test               # pipeline checks
+npm run test:e2e       # Playwright brief flow
 ```
 
 - Product: `/` → `/insider` → `/requirements` → `/results` (starts Grok Bot)

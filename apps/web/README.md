@@ -8,18 +8,19 @@ Marketplace listings on `/results` come from a live agent. The reference images,
 npm install
 npm run dev        # http://localhost:3000
 npm test           # pipeline checks
+npm run test:e2e   # Playwright brief flow (starts next dev)
 ```
 
-Requires Node 20.9+. For live discovery, configure the Grok Bot webhook and `TAVILY_API_KEY` (see `.env.example`).
+Requires Node 22+ (`npm test` uses `--experimental-strip-types`). For live discovery, configure the Grok Bot webhook, `TAVILY_API_KEY`, `APP_GATE_PASSWORD`, `SESSION_SECRET`, and Upstash Redis (see `.env.example`).
 
 ## Pages
 
 A four-step flow for briefing the agent, then its results:
 
-- `/`: step 1 — what are you looking for? Free text.
-- `/insider`: step 2 — insider information (brand misspellings, materials, colourway, distinguishing details), pre-filled from the reference set when your search matches a known brand.
-- `/requirements`: step 3 — purchase requirements (budget, shipping destination, sizes you'll take). Confirm or switch the agent here.
-- `/results`: step 4 — starts Grok Bot, then ranked live opportunities, with filters (Flagged, Needs review, Passed, No match), a confidence score and an ease-of-shipping read per listing based on your destination.
+- `/`: step 1 — what are you looking for? Free text. An attached photo is optional; only the filename is used as a hint (pixels are not analyzed).
+- `/insider`: step 2 — insider information (brand misspellings, materials, colourway, distinguishing details). Known brands are pre-filled from the reference set; chips stay editable.
+- `/requirements`: step 3 — purchase requirements (budget, shipping destination, sizes you'll take). Destination changes landed-cost math. Grok Bot is the sourcing agent.
+- `/results`: step 4 — starts Grok Bot, then ranked live opportunities for **this run** (once `requestId` is pinned), with filters (Flagged, Needs review, Passed, No match), a confidence score and an ease-of-shipping read per listing based on your destination. All findings (every run) is a separate link.
 - `/listing/[id]`: side-by-side visual evidence, OCR reads, comps, landed cost, and buy/ask/dismiss buttons (decisions are saved in your browser)
 - `/references`: the target universe (brands, variants, models, distinguishing details)
 - `/api/opportunities`: the pipeline output as JSON
@@ -53,7 +54,7 @@ Penalties apply when the evidence contradicts itself. A tag reading a non-target
 
 Completing the brief on `/results` starts Grok Bot. Findings are stored and scored with the rest of the pipeline:
 
-- **Grok Bot** — `POST /api/emily/invoke` wakes the webhook routine and includes `mcpUrl` (`https://www.autonoemily.world/api/mcp`). The bot searches via that MCP’s `tavily_search` and closes the loop with `submit_findings`. The results page keeps `requestId` in the URL, polls `/api/emily/runs/[requestId]`, hydrates that run’s listings from Redis, and refreshes the scored list. On Vercel, invoke/submit fail if Upstash Redis is unset so a run cannot report submitted without persistable listings.
+- **Grok Bot** — `POST /api/emily/invoke` wakes the webhook routine and includes `mcpUrl` (`https://www.autonoemily.world/api/mcp`). The bot searches via that MCP’s `tavily_search` and closes the loop with `submit_findings` (full `RawFinding`s or Tavily-shaped title/url hits). The results page keeps `requestId` in the URL, polls `/api/emily/runs/[requestId]`, hydrates that run’s listings from Redis, and scores **that run** in the list. On Vercel, invoke/submit fail if Upstash Redis is unset so a run cannot report submitted without persistable listings. Local `NEXT_PUBLIC_APP_URL=http://localhost:3000` still sends the bot to the public MCP — the bot cannot reach localhost.
 - `components/AgentRun.tsx` — signs in if needed, starts Grok Bot, and reports status above the scored list.
 
 Live hits still lack real CLIP/OCR, so identity confidence is weaker than the old fixture set. Grok Bot needs the webhook + MCP setup. `/invoke` remains an operator shortcut for the same API.

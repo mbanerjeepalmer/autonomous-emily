@@ -1,27 +1,36 @@
 // 5. SCORE THE OPPORTUNITY
-// asking price → landed cost in London → vs comp value, weighted by match confidence.
+// asking price → landed cost at the buyer's destination → vs comp value, weighted by match confidence.
 
 import { listFindings, setPipelineCacheInvalidator } from "./sources/store.ts";
 import { FX_TO_GBP, IMPORT, RULES, SOURCE_COSTS } from "./config.ts";
+import { DEFAULT_DESTINATION, sourceOrigin, type DestinationId } from "./destinations.ts";
 import { matchListing } from "./match.ts";
 import { toGbp, valueItem } from "./valuation.ts";
 import type { CostLine, Listing, Opportunity } from "./types.ts";
 
-export function landedCost(listing: Listing): { total: number; lines: CostLine[] } {
+export function landedCost(
+  listing: Listing,
+  dest: DestinationId = DEFAULT_DESTINATION,
+): { total: number; lines: CostLine[] } {
   const src = SOURCE_COSTS[listing.source];
+  const origin = sourceOrigin(listing.source);
+  const domestic = origin === dest;
   const item = toGbp(listing.price);
   const lines: CostLine[] = [{ label: "Asking price", gbp: item }];
-  if (src.proxyFeePct != null) {
+  if (!domestic && src.proxyFeePct != null) {
     lines.push({ label: `Proxy fee (${src.proxyFeePct * 100}% + ¥${src.proxyFixedJpy})`, gbp: item * src.proxyFeePct + (src.proxyFixedJpy ?? 0) * FX_TO_GBP.JPY });
   }
-  if (src.domesticShipGbp) lines.push({ label: "Domestic shipping", gbp: src.domesticShipGbp });
-  if (src.intlShipGbp) lines.push({ label: "International shipping", gbp: src.intlShipGbp });
-  if (src.imported) {
+  if (src.domesticShipGbp && (origin === "jp" || domestic)) {
+    lines.push({ label: "Domestic shipping", gbp: src.domesticShipGbp });
+  }
+  if (!domestic && src.intlShipGbp) lines.push({ label: "International shipping", gbp: src.intlShipGbp });
+  const applyImport = !domestic && (dest === "uk" || dest === "eu") && src.imported;
+  if (applyImport) {
     const goods = lines.reduce((s, l) => s + l.gbp, 0);
     const duty = item > IMPORT.dutyThresholdGbp ? item * IMPORT.duty : 0;
     if (duty) lines.push({ label: `Customs duty (${IMPORT.duty * 100}%)`, gbp: duty });
     lines.push({ label: `Import VAT (${IMPORT.vat * 100}%)`, gbp: (goods + duty) * IMPORT.vat });
-  } else {
+  } else if (domestic) {
     lines.push({ label: "Local collection", gbp: 0 });
   }
   return { total: lines.reduce((s, l) => s + l.gbp, 0), lines };
@@ -29,9 +38,9 @@ export function landedCost(listing: Listing): { total: number; lines: CostLine[]
 
 const fmt = (n: number) => `${n < -0.5 ? "−" : ""}£${Math.abs(Math.round(n))}`;
 
-export function evaluate(listing: Listing): Opportunity {
+export function evaluate(listing: Listing, dest: DestinationId = DEFAULT_DESTINATION): Opportunity {
   const askingGbp = toGbp(listing.price);
-  const landed = landedCost(listing);
+  const landed = landedCost(listing, dest);
   const candidates = matchListing(listing);
   const top = candidates[0];
   // Keep a rejected lookalike as the "match" so the reviewer sees why it was rejected.
@@ -91,6 +100,7 @@ export function evaluate(listing: Listing): Opportunity {
 }
 
 let cache: Opportunity[] | null = null;
+let cacheDest: DestinationId | null = null;
 
 /**
  * Clear the derived opportunity cache after the findings store changes.
@@ -101,6 +111,7 @@ let cache: Opportunity[] | null = null;
  */
 export function invalidatePipelineCache(): void {
   cache = null;
+  cacheDest = null;
 }
 
 setPipelineCacheInvalidator(invalidatePipelineCache);
@@ -109,12 +120,14 @@ function allListings(): Listing[] {
   return listFindings();
 }
 
-export function runPipeline(): Opportunity[] {
-  if (!cache) {
+export function runPipeline(dest: DestinationId = DEFAULT_DESTINATION): Opportunity[] {
+  if (!cache || cacheDest !== dest) {
     const order = { flagged: 0, review: 1, pass: 2, "no-match": 3 } as const;
-    cache = allListings().map(evaluate).sort((a, b) => order[a.status] - order[b.status] || b.score - a.score);
+    cache = allListings().map((listing) => evaluate(listing, dest)).sort((a, b) => order[a.status] - order[b.status] || b.score - a.score);
+    cacheDest = dest;
   }
   return cache;
 }
 
-export const getOpportunity = (id: string) => runPipeline().find((o) => o.listing.id === id);
+export const getOpportunity = (id: string, dest: DestinationId = DEFAULT_DESTINATION) =>
+  runPipeline(dest).find((o) => o.listing.id === id);

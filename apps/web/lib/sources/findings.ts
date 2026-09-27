@@ -35,6 +35,11 @@ function required(value: string, name: string): string {
   return trimmed;
 }
 
+/** Listing ids become `/listing/[id]` segments — strip path-breaking characters. */
+export function listingId(externalId: string): string {
+  return `bot:${required(externalId, "externalId").replace(/[/\\?#]+/g, "-")}`;
+}
+
 function httpUrl(value: string, name: string): string {
   const url = required(value, name);
   try {
@@ -128,7 +133,7 @@ function externalIdFromUrl(url: string): string {
 export function listingFromLooseFinding(raw: LooseFinding): Listing {
   const url = httpUrl(raw.url, "url");
   const title = required(raw.title, "title");
-  const id = `bot:${externalIdFromUrl(url)}`;
+  const id = listingId(externalIdFromUrl(url));
   const description = raw.snippet?.trim() || title;
   return {
     id,
@@ -164,7 +169,7 @@ export function toListing(raw: RawFinding): Listing {
     throw new Error("at least one photo is required");
   }
 
-  const id = `bot:${externalId}`;
+  const id = listingId(externalId);
   const seenUrls = new Set<string>();
   const photos = raw.photos
     .map((photo, index) => ({ photo, index }))
@@ -198,4 +203,12 @@ export function toListing(raw: RawFinding): Listing {
     postedAt,
     photos,
   };
+}
+
+/** Accept a full RawFinding or a Tavily-shaped hit that cannot fill photos. */
+export function mapSubmittedFinding(raw: RawFinding | LooseFinding): Listing {
+  if ("externalId" in raw && "photos" in raw) {
+    return toListing(raw);
+  }
+  return listingFromLooseFinding(raw);
 }

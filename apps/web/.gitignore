@@ -4,4 +4,9 @@
 .env.local
 .next
 next-env.d.ts
+tsconfig.tsbuildinfo
 node_modules
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

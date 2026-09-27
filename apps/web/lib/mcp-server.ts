@@ -4,7 +4,7 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { toListing } from "@/lib/sources/findings";
+import { mapSubmittedFinding, type LooseFinding } from "@/lib/sources/findings";
 import { upsertFindings } from "@/lib/sources/store";
 import { searchTavily } from "@/lib/sources/tavily";
 import type { RawFinding } from "@/lib/sources/types";
@@ -45,6 +45,14 @@ const rawFindingSchema: z.ZodType<RawFinding> = z.object({
   location: z.string(),
   postedAt: z.string(),
   photos: z.array(rawFindingPhotoSchema).min(1),
+});
+
+const looseFindingSchema: z.ZodType<LooseFinding> = z.object({
+  title: z.string().min(1),
+  url: z.string().url(),
+  source: z.string().optional(),
+  price: z.string().optional(),
+  snippet: z.string().optional(),
 });
 
 function jsonToolResult(payload: unknown, isError = false) {
@@ -100,11 +108,11 @@ export function createEmilyMcpServer(): McpServer {
     {
       title: "Submit findings",
       description:
-        "Validate RawFinding[], map to listings, and upsert into the product pipeline for a requestId.",
+        "Map findings to listings and upsert into the product pipeline for a requestId. Prefer full RawFinding objects (photos, structured price). Tavily-shaped hits (title, url, price string, snippet) are accepted when photos cannot be filled.",
       inputSchema: {
         requestId: z.string().min(1).describe("Invoke requestId from the webhook"),
         findings: z
-          .array(rawFindingSchema)
+          .array(z.union([rawFindingSchema, looseFindingSchema]))
           .describe("Marketplace findings to persist"),
       },
       annotations: {
@@ -115,7 +123,7 @@ export function createEmilyMcpServer(): McpServer {
     },
     async ({ requestId, findings }) => {
       try {
-        const listings = findings.map((raw) => toListing(raw));
+        const listings = findings.map((raw) => mapSubmittedFinding(raw));
         const run = await upsertFindings(requestId, listings);
         return jsonToolResult({
           ok: true,
